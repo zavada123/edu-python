@@ -12,6 +12,7 @@
 import { type Engine, type EngineSink, loadEngine, type RunResult } from "../engine/engine.ts"
 import type { Chunk, EventRequest, TurtleOp, WorkerMessage, WorkerRequest } from "../engine/protocol.ts"
 import { engineSources } from "../engine/sources.ts"
+import { stopCodeGeneration } from "../engine/wall.ts"
 
 /** While the program works, the page gets new output at most this often. */
 const ProgressIntervalMs = 50
@@ -104,6 +105,8 @@ const handle = (ready: Engine, request: EventRequest): void => {
 
 /** Starts the worker: call it once at the top of the worker file of the page. */
 export const startPythonWorker = (wasmUrl: string): void => {
+  // The worker belongs to the engine: student code cannot make JavaScript from text here (`wall.ts`).
+  stopCodeGeneration()
   addEventListener("message", (event: MessageEvent<WorkerRequest>) => {
   engine ??= loadEngine(engineSources(wasmUrl))
   const request = event.data
