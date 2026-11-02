@@ -4,6 +4,7 @@
  * runs many programs: each run gets a new `__main__` scope, a new turtle and new windows (`prelude.py`).
  * A window program stays in the engine after `mainloop()`: `event` calls its handlers.
  */
+import { hideJavaScript } from "./wall.ts"
 import { loadMicroPython, type MicroPython } from "@micropython/micropython-webassembly-pyscript"
 import type { Library } from "./library.ts"
 import { type Chunk, ChunkKinds, type EventRequest, MaxOutputChars, MaxSceneChars, type RunRequest, type TurtleOp } from "./protocol.ts"
@@ -161,6 +162,8 @@ export const loadEngine = async (sources: EngineSources): Promise<Engine> => {
     python.FS.writeFile(`/lib/${path}`, module)
   }
   python.runPython(sources.prelude)
+  // Student code gets no JavaScript globals (`wall.ts`). Without the wall the engine does not run programs.
+  if (!hideJavaScript()) throw new Error("the engine cannot hide JavaScript from Python")
 
   const prepare = (request: RunRequest, runSink: EngineSink): void => {
     sink = runSink
