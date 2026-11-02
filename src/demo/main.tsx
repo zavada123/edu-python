@@ -4,6 +4,7 @@ import { StrictMode, useRef, useState } from "react"
 import { createRoot } from "react-dom/client"
 import { browserWorker, shareFragmentOf, sharedCodeOf } from "../core.ts"
 import { PythonIde, PythonRunner } from "../react.ts"
+import "../ui/python.css"
 import "./demo.css"
 
 // Demo of edu-python: the Online IDE with the code in this browser and a share link, and the compact runner.
