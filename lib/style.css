@@ -155,7 +155,7 @@
 .epy-ide__pane--editor { border-bottom: 1px solid var(--epy-border); }
 .epy-ide__tab { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 2px 12px; border-bottom: 1px solid var(--epy-border); font-size: 14px; }
 .epy-ide__file-icon { width: 16px; height: 16px; color: var(--epy-primary); flex-shrink: 0; }
-.epy-ide__file { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.epy-ide__file { flex-shrink: 0; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .epy-ide__note { margin-left: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--epy-muted-text); }
 .epy-ide__editor { height: 22rem; min-height: 0; }
 .epy-ide--full .epy-ide__editor { height: auto; flex: 1; }

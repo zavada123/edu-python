@@ -209,3 +209,7 @@ export declare const MaxOutputChars = 200000;
 export declare const MaxSceneChars = 4000000;
 /** A program that works longer than this is stopped (a loop that never ends). Waiting for input does not count. */
 export declare const TimeLimitMs = 5000;
+/** Values for `input()`: one per line of the test input. A newline at the end does not add an empty value. */
+export declare const inputLines: (input: string) => ReadonlyArray<string>;
+/** The seed of `random` in task tests: the same output on every check. */
+export declare const TestSeed = 1;

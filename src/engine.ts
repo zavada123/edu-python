@@ -4,6 +4,6 @@
  */
 export { type Engine, type EngineSink, type EngineSources, loadEngine, type RunResult, silentSink } from "./engine/engine.ts"
 export { type Library, type LibraryFile, LibraryFiles, readLibrary } from "./engine/library.ts"
-export { inputLines, type ProgramResult, runProgram, TestSeed } from "./engine/program.ts"
+export { type ProgramResult, runProgram } from "./engine/program.ts"
 export * from "./engine/protocol.ts"
 export { engineSources, loadNodeEngine, pythonLibrary, pythonPrelude } from "./engine/sources.ts"

@@ -1,7 +1,8 @@
 import { beforeAll, describe, expect, test } from "vitest"
 import type { Engine } from "../src/engine/engine.ts"
 import { loadNodeEngine } from "../src/engine/sources.ts"
-import { inputLines, runProgram } from "../src/engine/program.ts"
+import { runProgram } from "../src/engine/program.ts"
+import { inputLines } from "../src/engine/protocol.ts"
 
 let engine: Engine
 

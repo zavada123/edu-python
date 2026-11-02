@@ -137,3 +137,13 @@ export const MaxOutputChars = 200_000
 export const MaxSceneChars = 4_000_000
 /** A program that works longer than this is stopped (a loop that never ends). Waiting for input does not count. */
 export const TimeLimitMs = 5_000
+
+/** Values for `input()`: one per line of the test input. A newline at the end does not add an empty value. */
+export const inputLines = (input: string): ReadonlyArray<string> => {
+  const lines = input.replace(/\r\n?/g, "\n").split("\n")
+  if (lines.at(-1) === "") lines.pop()
+  return lines
+}
+
+/** The seed of `random` in task tests: the same output on every check. */
+export const TestSeed = 1
