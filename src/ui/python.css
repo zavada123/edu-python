@@ -1,0 +1,201 @@
+/*
+ * Styles of edu-python. All colors are variables on `.epy`: a page gives its own theme by setting them, for example
+ * `.epy { --epy-primary: var(--primary); }`. Classes start with `epy-` so they do not meet the classes of the page.
+ */
+.epy {
+  --epy-primary: #d6245d;
+  --epy-primary-hover: #b81d4f;
+  --epy-primary-text: #ffffff;
+  --epy-primary-soft: #fde8ef;
+  --epy-text: #1b1f27;
+  --epy-muted: #f4f2f5;
+  --epy-muted-text: #5b6170;
+  --epy-card: #ffffff;
+  --epy-border: #e3e0e6;
+  --epy-ring: rgb(214 36 93 / 0.35);
+  --epy-danger: #d92d20;
+  --epy-danger-soft: #fdecea;
+  --epy-warning: #b54708;
+  --epy-warning-soft: #fff6e5;
+  --epy-info: #1d6fd6;
+  --epy-info-soft: #eaf2fd;
+  --epy-radius: 10px;
+  --epy-font: inherit;
+  --epy-font-mono: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace;
+
+  /* Code colors with WCAG AA contrast on the muted background. */
+  --epy-code-keyword: #5a30b9;
+  --epy-code-string: #005e26;
+  --epy-code-number: #a02d00;
+  --epy-code-comment: #515b6c;
+  --epy-code-title: #194cb1;
+
+  /* Windows of tkinter programs look like Windows windows in any theme: the program sets its own colors. */
+  --tk-face: #f0f0f0;
+  --tk-paper: #ffffff;
+  --tk-text: #000000;
+  --tk-frame: #7a7a7a;
+  --tk-shadow: #a0a0a0;
+  --tk-dark: #333333;
+  --tk-accent: #0078d7;
+  --tk-icon: #2a6db0;
+  --tk-close: #e81123;
+  --tk-warning: #e8a600;
+  --tk-button: #e1e1e1;
+  --tk-button-hover: #e5f1fb;
+  --tk-backdrop: rgb(0 0 0 / 0.15);
+
+  box-sizing: border-box;
+  color: var(--epy-text);
+  font-family: var(--epy-font);
+}
+.epy *, .epy *::before, .epy *::after { box-sizing: border-box; }
+
+/* Buttons */
+.epy-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  border: 1.5px solid transparent; border-radius: 999px; background: transparent; color: var(--epy-text);
+  font: inherit; font-weight: 700; white-space: nowrap; cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.epy-btn svg { width: 16px; height: 16px; flex-shrink: 0; pointer-events: none; }
+.epy-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--epy-ring); }
+.epy-btn:disabled { cursor: default; opacity: 0.45; box-shadow: none; }
+.epy-btn--md { min-height: 44px; padding: 0 20px; font-size: 16px; }
+.epy-btn--sm { min-height: 36px; padding: 0 12px; font-size: 14px; }
+.epy-btn--primary { background: var(--epy-primary); color: var(--epy-primary-text); }
+.epy-btn--primary:hover:not(:disabled) { background: var(--epy-primary-hover); }
+.epy-btn--outline { border-color: var(--epy-border); background: var(--epy-card); }
+.epy-btn--outline:hover:not(:disabled) { border-color: var(--epy-primary); color: var(--epy-primary); }
+.epy-btn--ghost:hover:not(:disabled) { background: var(--epy-muted); }
+.epy-btn--danger { background: var(--epy-danger); color: #ffffff; }
+
+/* Messages */
+.epy-alert {
+  display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px;
+  border: 1px solid; border-radius: 14px; font-size: 14px; font-weight: 600;
+}
+.epy-alert__icon { width: 20px; height: 20px; flex-shrink: 0; }
+.epy-alert__body { min-width: 0; flex: 1; }
+.epy-alert--info { border-color: color-mix(in oklab, var(--epy-info) 45%, transparent); background: var(--epy-info-soft); }
+.epy-alert--info .epy-alert__icon { color: var(--epy-info); }
+.epy-alert--warning { border-color: color-mix(in oklab, var(--epy-warning) 55%, transparent); background: var(--epy-warning-soft); }
+.epy-alert--warning .epy-alert__icon { color: var(--epy-warning); }
+.epy-alert--error { border-color: color-mix(in oklab, var(--epy-danger) 45%, transparent); background: var(--epy-danger-soft); }
+.epy-alert--error .epy-alert__icon { color: var(--epy-danger); }
+
+.epy-inline-code { border-radius: 4px; background: var(--epy-muted); padding: 0 4px; font-family: var(--epy-font-mono); }
+.epy-caption { margin: 0; font-size: 14px; font-weight: 700; color: var(--epy-muted-text); }
+.epy-muted { color: var(--epy-muted-text); }
+.epy-status { margin: 0; min-height: 20px; font-size: 14px; color: var(--epy-muted-text); }
+
+/* Run output */
+.epy-console-wrap { display: flex; flex-direction: column; gap: 4px; }
+.epy-console {
+  overflow: auto; border: 1px solid var(--epy-border); border-radius: var(--epy-radius); background: var(--epy-muted);
+  padding: 12px; font-family: var(--epy-font-mono); font-size: 14px; line-height: 24px;
+}
+.epy-console--card { min-height: 64px; max-height: 320px; }
+.epy-console--panel { min-height: 160px; }
+.epy-console__text { margin: 0; padding: 0; background: transparent; font: inherit; white-space: pre-wrap; overflow-wrap: anywhere; }
+.epy-console__input { font-weight: 700; text-decoration: underline 2px var(--epy-primary); text-underline-offset: 2px; }
+.epy-input-line { display: flex; gap: 8px; margin-top: 4px; }
+.epy-input-line__field {
+  min-width: 0; flex: 1; border: 1px solid var(--epy-primary); border-radius: 6px; background: var(--epy-card);
+  padding: 4px 8px; color: var(--epy-text); font-family: var(--epy-font-mono); font-size: 16px;
+}
+.epy-input-line__field:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--epy-ring); }
+.epy-input-line__submit {
+  border: 0; border-radius: 6px; background: var(--epy-primary); padding: 0 12px;
+  color: var(--epy-primary-text); font: inherit; font-weight: 700; cursor: pointer;
+}
+.epy-problem { display: flex; flex-direction: column; gap: 6px; }
+.epy-problem p { margin: 0; }
+.epy-problem__details { font-weight: 400; }
+.epy-problem__details summary { cursor: pointer; color: var(--epy-muted-text); }
+.epy-problem__message { font-family: var(--epy-font-mono); overflow-wrap: anywhere; }
+
+/* Symbol bar for touch screens */
+.epy-symbols { display: none; flex-wrap: wrap; gap: 4px; }
+@media (pointer: coarse) { .epy-symbols { display: flex; } }
+.epy-symbols__key {
+  min-width: 40px; height: 40px; padding: 0 8px; border: 1px solid var(--epy-border); border-radius: 6px;
+  background: var(--epy-card); color: var(--epy-text); font-family: var(--epy-font-mono); font-size: 16px; font-weight: 700;
+}
+
+/* Editor */
+.epy-editor { overflow: hidden; }
+.epy-editor--grow { border: 1px solid var(--epy-border); border-radius: var(--epy-radius); }
+.epy-editor--fill { height: 100%; min-height: 0; }
+
+.epy-turtle { display: block; aspect-ratio: 1; width: 100%; max-width: 600px; border: 1px solid var(--epy-border); border-radius: var(--epy-radius); }
+
+/* Toolbar */
+.epy-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.epy-toolbar__end { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-left: auto; }
+.epy-toolbar__note { margin-left: auto; font-size: 12px; color: var(--epy-muted-text); }
+
+/* Compact runner */
+.epy-runner {
+  display: flex; flex-direction: column; gap: 12px; padding: 12px;
+  border: 2px solid color-mix(in oklab, var(--epy-primary) 30%, transparent); border-radius: var(--epy-radius);
+}
+@media (min-width: 640px) { .epy-runner { padding: 16px; } }
+
+/* Online IDE */
+.epy-ide {
+  display: flex; flex-direction: column; overflow: hidden;
+  border: 1px solid var(--epy-border); border-radius: 14px; background: var(--epy-card);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.08);
+}
+.epy-ide--full { position: fixed; inset: 0; z-index: 50; border-radius: 0; }
+.epy-ide__toolbar { border-bottom: 1px solid var(--epy-border); background: color-mix(in oklab, var(--epy-muted) 60%, transparent); padding: 8px 12px; }
+.epy-ide__body { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+.epy-ide__pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.epy-ide__pane--editor { border-bottom: 1px solid var(--epy-border); }
+.epy-ide__tab { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 2px 12px; border-bottom: 1px solid var(--epy-border); font-size: 14px; }
+.epy-ide__file-icon { width: 16px; height: 16px; color: var(--epy-primary); flex-shrink: 0; }
+.epy-ide__file { flex-shrink: 0; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.epy-ide__note { margin-left: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--epy-muted-text); }
+.epy-ide__editor { height: 22rem; min-height: 0; }
+.epy-ide--full .epy-ide__editor { height: auto; flex: 1; }
+.epy-ide__symbols { padding: 0 12px; }
+.epy-ide__symbols:has(.epy-symbols) { padding-bottom: 8px; }
+.epy-ide__output { display: flex; flex: 1; flex-direction: column; gap: 12px; min-height: 0; overflow: auto; padding: 12px; }
+@media (min-width: 1024px) {
+  .epy-ide:not(.epy-ide--full) { height: 40rem; }
+  .epy-ide__body { flex-direction: row; }
+  .epy-ide__pane { flex: 1; }
+  .epy-ide__pane--editor { border-bottom: 0; border-right: 1px solid var(--epy-border); }
+  .epy-ide__editor { height: auto; flex: 1; }
+}
+
+/* Windows of tkinter programs */
+.epy-tk-area { position: relative; display: flex; flex-direction: column; gap: 8px; min-height: 96px; }
+.epy-tk-windows { display: flex; flex-direction: column; gap: 12px; }
+.epy-tk-windows--idle { pointer-events: none; opacity: 0.7; }
+.epy-tk-figure { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.epy-tk-scroll { max-width: 100%; overflow-x: auto; padding-bottom: 4px; }
+.epy-tk-window, .epy-tk-dialog {
+  display: inline-flex; flex-direction: column; border: 1px solid var(--tk-frame); background: var(--tk-paper);
+  color: var(--tk-text); font: 12px "Segoe UI", system-ui, sans-serif; box-shadow: 0 4px 10px rgb(0 0 0 / 0.15);
+}
+.epy-tk-title { display: flex; align-items: center; gap: 8px; height: 30px; padding-left: 8px; user-select: none; }
+.epy-tk-title__icon { width: 16px; height: 16px; flex-shrink: 0; color: var(--tk-icon); }
+.epy-tk-title__text { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.epy-tk-close { display: flex; align-items: center; justify-content: center; width: 46px; height: 30px; border: 0; background: transparent; color: inherit; }
+.epy-tk-close:hover:not(:disabled) { background: var(--tk-close); color: var(--tk-paper); }
+.epy-tk-close__icon { width: 16px; height: 16px; }
+.epy-tk-client:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--epy-ring); }
+.epy-tk-place { font-size: 12px; color: var(--epy-muted-text); }
+.epy-tk-backdrop { position: absolute; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; padding: 8px; background: var(--tk-backdrop); }
+.epy-tk-dialog { max-width: min(26rem, 100%); min-width: 14rem; display: flex; }
+.epy-tk-dialog__body { display: flex; align-items: flex-start; gap: 12px; padding: 16px; }
+.epy-tk-dialog__icon { width: 32px; height: 32px; flex-shrink: 0; }
+.epy-tk-dialog__icon--info { color: var(--tk-accent); }
+.epy-tk-dialog__icon--warning { color: var(--tk-warning); }
+.epy-tk-dialog__icon--error { color: var(--tk-close); }
+.epy-tk-dialog__message { margin: 0; padding-top: 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.epy-tk-dialog__buttons { display: flex; justify-content: flex-end; padding: 10px 12px; background: var(--tk-face); }
+.epy-tk-button { min-width: 75px; padding: 4px 12px; border: 1px solid var(--tk-accent); background: var(--tk-button); color: inherit; font: inherit; }
+.epy-tk-button:hover { background: var(--tk-button-hover); }
