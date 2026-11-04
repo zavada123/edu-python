@@ -98,6 +98,9 @@
 .epy-console--card { min-height: 64px; max-height: 320px; }
 .epy-console--panel { min-height: 160px; }
 .epy-console__text { margin: 0; padding: 0; background: transparent; font: inherit; white-space: pre-wrap; overflow-wrap: anywhere; }
+/* Values of `print` in the colors of the editor: `print("10", 10)` shows that the second 10 is a number. */
+.epy-console__number { color: var(--epy-code-number); }
+.epy-console__constant { color: var(--epy-code-keyword); }
 .epy-console__input { font-weight: 700; text-decoration: underline 2px var(--epy-primary); text-underline-offset: 2px; }
 .epy-input-line { display: flex; gap: 8px; margin-top: 4px; }
 .epy-input-line__field {

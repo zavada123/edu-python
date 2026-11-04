@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from "vitest"
 import { type Engine, type EngineSink, silentSink } from "../src/engine/engine.ts"
 import { loadNodeEngine } from "../src/engine/sources.ts"
-import { type Chunk, ChunkKinds, type TurtleOp } from "../src/engine/protocol.ts"
+import { appendChunk, type Chunk, ChunkKinds, type TurtleOp, ValueKinds } from "../src/engine/protocol.ts"
 
 let engine: Engine
 
@@ -36,6 +36,84 @@ const run = (code: string, inputs: ReadonlyArray<string>) => {
   return { result, ...captured }
 }
 
+const Out = ChunkKinds.Output
+
+describe("print shows the types of values", () => {
+  test("marks a number and leaves a string with the same text plain", () => {
+    // Act
+    const r = run('print("10", 10)', [])
+
+    // Assert
+    expect(r.chunks).toEqual([
+      { kind: Out, text: "10 " },
+      { kind: Out, text: "10", value: ValueKinds.Number },
+      { kind: Out, text: "\n" }
+    ])
+  })
+
+  test("marks floats as numbers and True, False, None as constants", () => {
+    // Act
+    const r = run('print(2.5, True, None, [1])', [])
+
+    // Assert
+    expect(r.chunks).toEqual([
+      { kind: Out, text: "2.5", value: ValueKinds.Number },
+      { kind: Out, text: " " },
+      { kind: Out, text: "True", value: ValueKinds.Constant },
+      { kind: Out, text: " " },
+      { kind: Out, text: "None", value: ValueKinds.Constant },
+      { kind: Out, text: " [1]\n" }
+    ])
+  })
+
+  test("keeps sep, end and the text of print as in Python", () => {
+    // Act
+    const r = run('print(1, "a", 2, sep="-", end="!")\nprint()\nprint(3, sep=None, end=None)\nprint("x", flush=True)', [])
+
+    // Assert
+    expect(r.result).toEqual({ _tag: "Finished" })
+    expect(outputOf(r.chunks)).toBe("1-a-2!\n3\nx\n")
+  })
+
+  test("writes to a file object as before", () => {
+    // Act
+    const r = run('import io\nf = io.StringIO()\nprint(5, file=f)\nprint(repr(f.getvalue()))', [])
+
+    // Assert
+    expect(outputOf(r.chunks)).toBe("'5\\n'\n")
+  })
+
+  test("fails like Python when sep is not a string", () => {
+    // Act
+    const r = run('print(1, 2, sep=5)', [])
+
+    // Assert
+    expect(r.result._tag).toBe("Failed")
+    expect(r.result._tag === "Failed" && r.result.traceback).toMatch(/TypeError: sep must be None or a string, not int/)
+  })
+
+  test("appendChunk joins output of one type and keeps typed input apart", () => {
+    // Arrange
+    const chunks: Array<Chunk> = []
+
+    // Act
+    appendChunk(chunks, { kind: Out, text: "1", value: ValueKinds.Number })
+    appendChunk(chunks, { kind: Out, text: "2", value: ValueKinds.Number })
+    appendChunk(chunks, { kind: Out, text: "\n" })
+    appendChunk(chunks, { kind: Out, text: "a\n" })
+    appendChunk(chunks, { kind: ChunkKinds.Input, text: "x\n" })
+    appendChunk(chunks, { kind: ChunkKinds.Input, text: "y\n" })
+
+    // Assert
+    expect(chunks).toEqual([
+      { kind: Out, text: "12", value: ValueKinds.Number },
+      { kind: Out, text: "\na\n" },
+      { kind: ChunkKinds.Input, text: "x\n" },
+      { kind: ChunkKinds.Input, text: "y\n" }
+    ])
+  })
+})
+
 describe("engine", () => {
   test("prints text with Ukrainian letters and numbers", () => {
     // Act
@@ -65,7 +143,8 @@ describe("engine", () => {
       { kind: ChunkKinds.Prompt, text: "a? " },
       { kind: ChunkKinds.Input, text: "2\n" },
       { kind: ChunkKinds.Input, text: "3\n" },
-      { kind: ChunkKinds.Output, text: "5\n" }
+      { kind: ChunkKinds.Output, text: "5", value: ValueKinds.Number },
+      { kind: ChunkKinds.Output, text: "\n" }
     ])
   })
 

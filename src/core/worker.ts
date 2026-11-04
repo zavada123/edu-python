@@ -10,7 +10,7 @@
  *     startPythonWorker(wasmUrl)
  */
 import { type Engine, type EngineSink, loadEngine, type RunResult } from "../engine/engine.ts"
-import type { Chunk, EventRequest, TurtleOp, WorkerMessage, WorkerRequest } from "../engine/protocol.ts"
+import { appendChunk, type Chunk, type EventRequest, type TurtleOp, type WorkerMessage, type WorkerRequest } from "../engine/protocol.ts"
 import { engineSources } from "../engine/sources.ts"
 import { stopCodeGeneration } from "../engine/wall.ts"
 
@@ -62,7 +62,7 @@ const execute = (ready: Engine, start: WorkerMessage, call: (sink: EngineSink) =
   post(start)
   const result = runSafely(call, {
     chunk: (c) => {
-      chunks.push(c)
+      appendChunk(chunks, c)
       sendSoon()
     },
     op: (o) => {

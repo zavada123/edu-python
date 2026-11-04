@@ -35,9 +35,32 @@ export type TurtleOp =
 export const ChunkKinds = { Output: "output", Prompt: "prompt", Input: "input" } as const
 export type ChunkKind = (typeof ChunkKinds)[keyof typeof ChunkKinds]
 
+/**
+ * Type of a value that `print` shows (`prelude.py`): the console colors it, so `print("10", 10)` shows a
+ * string and a number in different colors. Text without a type (strings, separators, `sys.stdout.write`)
+ * has no `value`.
+ */
+export const ValueKinds = { Number: "number", Constant: "constant" } as const
+export type ValueKind = (typeof ValueKinds)[keyof typeof ValueKinds]
+
 export interface Chunk {
   readonly kind: ChunkKind
   readonly text: string
+  /** Only for `Output`: the text is one value of this type that `print` shows. */
+  readonly value?: ValueKind
+}
+
+/**
+ * Adds `chunk` to the end of `chunks`. Program output of the same type joins the last chunk: a loop of
+ * `print(i)` does not make a new chunk for every newline. Prompts and typed values stay apart.
+ */
+export const appendChunk = (chunks: Array<Chunk>, chunk: Chunk): void => {
+  const last = chunks.at(-1)
+  if (last !== undefined && chunk.kind === ChunkKinds.Output && last.kind === ChunkKinds.Output && last.value === chunk.value) {
+    chunks[chunks.length - 1] = { ...last, text: last.text + chunk.text }
+    return
+  }
+  chunks.push(chunk)
 }
 
 export const MouseKinds = { Press: "Press", Release: "Release", Motion: "Motion", Enter: "Enter", Leave: "Leave", Wheel: "Wheel" } as const
