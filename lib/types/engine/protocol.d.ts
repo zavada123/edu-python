@@ -77,12 +77,13 @@ export declare const ChunkKinds: {
 };
 export type ChunkKind = (typeof ChunkKinds)[keyof typeof ChunkKinds];
 /**
- * Type of a value that `print` shows (`prelude.py`): the console colors it, so `print("10", 10)` shows a
- * string and a number in different colors. Text without a type (strings, separators, `sys.stdout.write`)
- * has no `value`.
+ * Type of a value that `print` shows (`prelude.py`): the console colors it as the editor does, so
+ * `print("10", 10)` shows a string and a number in different colors. Text without a type (separators,
+ * `sys.stdout.write`, lists and other objects) has no `value`.
  */
 export declare const ValueKinds: {
     readonly Number: "number";
+    readonly String: "string";
     readonly Constant: "constant";
 };
 export type ValueKind = (typeof ValueKinds)[keyof typeof ValueKinds];
