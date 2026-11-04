@@ -30,6 +30,49 @@ def _input(prompt=""):
 
 builtins.input = _input
 
+_print = builtins.print
+
+
+def _value_kind(value):
+    # The console colors numbers and True / False / None (protocol.ts, `ValueKinds`): `print("10", 10)` shows
+    # a string and a number in different colors. bool is an int, so it goes first.
+    if value is None or isinstance(value, bool):
+        return "constant"
+    if isinstance(value, (int, float)):
+        return "number"
+    return ""
+
+
+def _text_arg(name, value, default):
+    if value is None:
+        return default
+    if not isinstance(value, str):
+        raise TypeError("%s must be None or a string, not %s" % (name, type(value).__name__))
+    return value
+
+
+def _typed_print(*values, sep=" ", end="\n", file=None, flush=False):
+    # `flush`: the output goes to the page at once anyway.
+    if file is not None and file is not sys.stdout:
+        _print(*values, sep=sep, end=end, file=file)
+        return
+    sep = _text_arg("sep", sep, " ")
+    end = _text_arg("end", end, "\n")
+    out = sys.stdout
+    for i, value in enumerate(values):
+        if i > 0:
+            out.write(sep)
+        shown = str(value)
+        kind = _value_kind(value)
+        if kind:
+            _mriya.value(kind, shown)
+        else:
+            out.write(shown)
+    out.write(end)
+
+
+builtins.print = _typed_print
+
 
 def _traceback(error):
     text = io.StringIO()

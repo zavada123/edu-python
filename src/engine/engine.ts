@@ -7,7 +7,7 @@
 import { hideJavaScript } from "./wall.ts"
 import { loadMicroPython, type MicroPython } from "@micropython/micropython-webassembly-pyscript"
 import type { Library } from "./library.ts"
-import { type Chunk, ChunkKinds, type EventRequest, MaxOutputChars, MaxSceneChars, type RunRequest, type TurtleOp } from "./protocol.ts"
+import { type Chunk, ChunkKinds, type EventRequest, MaxOutputChars, MaxSceneChars, type RunRequest, type TurtleOp, type ValueKind, ValueKinds } from "./protocol.ts"
 
 /** Receives the output of a run while the program works. */
 export interface EngineSink {
@@ -54,6 +54,8 @@ export const silentSink: EngineSink = {
 
 const num = (value: unknown): number => (typeof value === "number" ? value : Number.NaN)
 const text = (value: unknown): string => (typeof value === "string" ? value : "")
+const valueKinds: ReadonlySet<unknown> = new Set(Object.values(ValueKinds))
+const isValueKind = (value: unknown): value is ValueKind => valueKinds.has(value)
 
 /** `"x y x y ..."` from `turtle.py` (a Python list does not convert to a JS array). */
 const points = (value: unknown): ReadonlyArray<number> => text(value).split(" ").filter((s) => s !== "").map(Number)
@@ -122,6 +124,13 @@ export const loadEngine = async (sources: EngineSources): Promise<Engine> => {
       }
       emit({ kind: ChunkKinds.Input, text: `${value}\n` })
       return value
+    },
+    /** One value of `print` with its type (`prelude.py`). The text before it goes out first. */
+    value: (kind: unknown, shown: unknown) => {
+      flush()
+      const value = text(shown)
+      if (value === "") return
+      emit(isValueKind(kind) ? { kind: ChunkKinds.Output, text: value, value: kind } : { kind: ChunkKinds.Output, text: value })
     },
     move: (x: unknown, y: unknown, pen: unknown, color: unknown, width: unknown) =>
       op({ _tag: "Move", x: num(x), y: num(y), pen: pen === true, color: text(color), width: num(width) }),

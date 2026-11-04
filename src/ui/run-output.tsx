@@ -90,7 +90,12 @@ export function Console(props: Readonly<{ view: RunView; layout: ConsoleLayout; 
           : (
             <pre className="epy-console__text">
               {props.view.chunks.map((c, i) => (
-                <span key={i} className={cn(c.kind === ChunkKinds.Input && "epy-console__input")}>{c.text}</span>
+                <span
+                  key={i}
+                  className={cn(c.kind === ChunkKinds.Input && "epy-console__input", c.value !== undefined && `epy-console__${c.value}`)}
+                >
+                  {c.text}
+                </span>
               ))}
             </pre>
           )}
