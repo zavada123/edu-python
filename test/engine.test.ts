@@ -39,13 +39,14 @@ const run = (code: string, inputs: ReadonlyArray<string>) => {
 const Out = ChunkKinds.Output
 
 describe("print shows the types of values", () => {
-  test("marks a number and leaves a string with the same text plain", () => {
+  test("marks a string and a number with the same text as different types", () => {
     // Act
     const r = run('print("10", 10)', [])
 
     // Assert
     expect(r.chunks).toEqual([
-      { kind: Out, text: "10 " },
+      { kind: Out, text: "10", value: ValueKinds.String },
+      { kind: Out, text: " " },
       { kind: Out, text: "10", value: ValueKinds.Number },
       { kind: Out, text: "\n" }
     ])

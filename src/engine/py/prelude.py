@@ -34,12 +34,14 @@ _print = builtins.print
 
 
 def _value_kind(value):
-    # The console colors numbers and True / False / None (protocol.ts, `ValueKinds`): `print("10", 10)` shows
+    # The console colors strings, numbers and True / False / None as the editor does (protocol.ts, `ValueKinds`): `print("10", 10)` shows
     # a string and a number in different colors. bool is an int, so it goes first.
     if value is None or isinstance(value, bool):
         return "constant"
     if isinstance(value, (int, float)):
         return "number"
+    if isinstance(value, str):
+        return "string"
     return ""
 
 
