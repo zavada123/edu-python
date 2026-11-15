@@ -1,14 +1,15 @@
-import { Play, RotateCcw, Square } from "lucide-react"
+import { Maximize2, Minimize2, Play, RotateCcw, Square } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import type { WorkerFactory } from "../core/session.ts"
 import { CodeEditor, EditorHeights, type EditorHandle } from "./code-editor.tsx"
-import { Button, ButtonSizes, ButtonVariants } from "./kit.tsx"
+import { Button, ButtonSizes, ButtonVariants, cn } from "./kit.tsx"
 import { canStop, Console, ConsoleLayouts, errorLineOf, Problem, statusLine, SymbolBar, usePythonRun } from "./run-output.tsx"
 import { TkWindows } from "./tk-window.tsx"
 import { TurtleCanvas } from "./turtle-canvas.tsx"
 
 // Compact Python runner for a lesson or a task: the editor with "Run" and "Stop", the console with `input()`, the
 // error with an explanation, the turtle canvas and the windows of a tkinter program. The editor grows with the code.
+// «На весь екран» puts the runner over the whole browser window; Esc puts it back.
 // The page keeps the drafts: it gets each change in `onCodeChange` and can replace the code with `onEditorReady`.
 
 export interface PythonRunnerProps {
@@ -28,6 +29,7 @@ export interface PythonRunnerProps {
 export function PythonRunner(props: PythonRunnerProps) {
   const editor = useRef<EditorHandle | null>(null)
   const [code, setCode] = useState(props.initialCode)
+  const [full, setFull] = useState(false)
   const run = usePythonRun(props.worker)
   const onCodeChange = useRef(props.onCodeChange)
 
@@ -39,11 +41,20 @@ export function PythonRunner(props: PythonRunnerProps) {
     onCodeChange.current(code)
   }, [code])
 
+  useEffect(() => {
+    if (!full) return
+    const close = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setFull(false)
+    }
+    window.addEventListener("keydown", close)
+    return () => window.removeEventListener("keydown", close)
+  }, [full])
+
   const start = () => run.start(code)
   const turtle = run.view.ops.length > 0 || /\bturtle\b/.test(code)
 
   return (
-    <div className="epy epy-runner" data-python-runner>
+    <div className={cn("epy epy-runner", full && "epy-runner--full")} data-python-runner>
       <div className="epy-toolbar">
         <Button variant={ButtonVariants.Primary} size={ButtonSizes.Md} disabled={false} onClick={start}>
           <Play aria-hidden /> Запустити
@@ -55,6 +66,9 @@ export function PythonRunner(props: PythonRunnerProps) {
           <RotateCcw aria-hidden /> Скинути код
         </Button>
         {props.note !== "" && <span className="epy-toolbar__note" aria-live="polite">{props.note}</span>}
+        <Button variant={ButtonVariants.Ghost} size={ButtonSizes.Sm} disabled={false} onClick={() => setFull((f) => !f)}>
+          {full ? <Minimize2 aria-hidden /> : <Maximize2 aria-hidden />} {full ? "Звичайний вигляд" : "На весь екран"}
+        </Button>
       </div>
       <CodeEditor
         initialCode={props.initialCode}
