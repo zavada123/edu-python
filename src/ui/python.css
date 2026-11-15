@@ -145,6 +145,7 @@
   border: 2px solid color-mix(in oklab, var(--epy-primary) 30%, transparent); border-radius: var(--epy-radius);
 }
 @media (min-width: 640px) { .epy-runner { padding: 16px; } }
+.epy-runner--full { position: fixed; inset: 0; z-index: 50; overflow: auto; border-radius: 0; background: var(--epy-card); }
 
 /* Online IDE */
 .epy-ide {
