@@ -1,3 +1,4 @@
+import { Option } from "effect"
 import { Maximize2, Minimize2, Play, RotateCcw, Square } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import type { WorkerFactory } from "../core/session.ts"
@@ -92,6 +93,11 @@ export function PythonRunner(props: PythonRunnerProps) {
         active={run.view.status._tag === "Window"}
         onInput={(input, layout) => run.session.current?.send(input, layout)}
         onCloseDialog={() => run.session.current?.closeDialog()}
+        images={run.view.images}
+        ask={run.view.status._tag === "Asking" ? Option.some(run.view.status.ask) : Option.none()}
+        onAnswer={(value, files) => run.session.current?.answer(value, files)}
+        downloads={run.view.downloads}
+        onDismissDownload={(name) => run.session.current?.dismissDownload(name)}
       />
       <Console view={run.view} layout={ConsoleLayouts.Card} onInput={run.provideInput} />
       {turtle && <TurtleCanvas ops={run.view.ops} runId={run.runId} />}

@@ -246,6 +246,15 @@ class Wm:
         else:
             self.destroy()
 
+    def _menu_bar(self):
+        menu = self._opts.get("menu")
+        if isinstance(menu, str) and menu != "":
+            try:
+                menu = self.nametowidget(menu)
+            except KeyError:
+                return 0
+        return menu._id if getattr(menu, "_kind", "") == "Menu" and menu._alive else 0
+
     def _scene(self):
         scene = self._base_scene()
         width = -1
@@ -263,6 +272,7 @@ class Wm:
                 "y": self._y,
                 "visible": self._visible,
                 "decorated": self._decorated,
+                "menu": self._menu_bar(),
             }
         )
         return scene

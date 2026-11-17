@@ -32,7 +32,7 @@ const engineWorker = (log: Array<WorkerRequest>): WorkerFactory => (onMessage) =
       }
       const result = request._tag === "Run" ? engine.run(request, sink) : engine.event(request, sink)
       progress.forEach(onMessage)
-      onMessage(result)
+      onMessage(result._tag === "Asking" ? { ...result, event: request._tag === "Event" ? request : null } : result)
     }, 0)
   },
   terminate: () => undefined

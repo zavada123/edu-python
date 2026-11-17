@@ -40,7 +40,8 @@ School programs need more than `print()`: they ask for values with `input()`, dr
 - **`input()` in the terminal**, as in IDLE. The worker cannot wait for a value without `SharedArrayBuffer` (COOP/COEP headers on every page), so a program that asks for a value stops and runs again with all values, with the same `random` seed. The student sees one continuous run.
 - **Types in the terminal**: `print` shows strings, numbers and `True` / `False` / `None` in the colors of the editor, so `print("10", 10)` shows a string and a number. The text of the output does not change (task checks compare the same text).
 - **turtle** with the names and the geometry of CPython `turtle` (`forward`, `circle` with `extent` and `steps`, `begin_fill`, `write` with a font, `speed`, `bgcolor`, `shape`…), animated frame by frame on a 600 × 600 canvas. `position()` and `heading()` work, because the state lives in Python.
-- **tkinter**: `Tk`, `Toplevel`, `Label`, `Button`, `Entry`, `Text`, `Checkbutton`, `Radiobutton`, `Scale`, `Frame`, `LabelFrame`, `Canvas`, `StringVar` / `IntVar` / `DoubleVar` / `BooleanVar`, `pack` / `grid` / `place`, events (`bind`), `after()`, `messagebox` and `ttk`. Windows look like Windows windows in any page theme.
+- **tkinter**: `Tk`, `Toplevel`, `Label`, `Button`, `Entry`, `Text` (tags with colours and fonts, marks, `search`, undo/redo, clipboard), `ScrolledText`, `Checkbutton`, `Radiobutton`, `Scale`, `Spinbox`, `Listbox`, `Scrollbar`, `Menu` (menu bar, cascades, `tk_popup`), `Menubutton`, `OptionMenu`, `Frame`, `LabelFrame`, `Canvas`, `PhotoImage` (PNG and GIF), `StringVar` / `IntVar` / `DoubleVar` / `BooleanVar`, `pack` / `grid` / `place`, events (`bind`), `after()`, `messagebox` (also `askyesno` and other questions), `simpledialog`, `colorchooser`, `filedialog` (open a file from the computer, save a file for download) and `ttk` (with `Combobox`). Windows look like Windows windows in any page theme.
+- **Safe windows**: everything a program shows (texts, file names, file contents) is drawn as text, never as HTML; an image is shown only after its bytes are checked as PNG or GIF, and a saved file is only downloaded, never opened on the page.
 - **Errors in Ukrainian**: MicroPython often says only "invalid syntax". `explainError` finds the usual cause: no colon, a bracket or a quote not closed, `=` in a condition, no indent, smart quotes, Cyrillic letters in a Latin word, a typo in a known name ("Python не знає слова `pritn`. Можливо, мало бути `print`?"). The error line is red in the editor; the original message is under a fold.
 - **Limits**: 5 s of work (waiting for `input()` does not count), 200 000 characters of output, a Stop button. A loop that never ends does not freeze the page: the worker is stopped.
 - **Phones**: a symbol bar (`Tab ( ) : " ' = , + - * / < > [ ] # _`) on touch screens; smart quotes from a phone keyboard become plain quotes.
@@ -215,6 +216,7 @@ html .epy {
 | `TimeLimitMs` | 5 000 | Work time of one run; waiting for `input()` or for a click in a window does not count |
 | `MaxOutputChars` | 200 000 | Terminal output of one run |
 | `MaxSceneChars` | 4 000 000 | One state of the tkinter windows (JSON) |
+| `MaxFileBytes` | 2 MB | One file that the student gives to a program (`filedialog`) |
 | `MAX_SHARED_CODE_LENGTH` | 6 000 | Code in a share link |
 
 ## Development
@@ -242,7 +244,8 @@ Every push to `main` runs the tests and deploys the demo to GitHub Pages: see th
 
 - A few files in one project (`import` of a student module).
 - `input()` without replay, when the page can send COOP/COEP headers (`SharedArrayBuffer`).
-- More of `tkinter`: `Listbox`, `Spinbox`, `Menu`, images (`PhotoImage`). Now they give a clear error in Ukrainian.
+- More of `tkinter`: `ttk.Notebook`, `ttk.Treeview`, `ttk.Progressbar`, `PanedWindow`. Now they give a clear error in Ukrainian.
+- Dialogs (`askyesno`, `filedialog`) in a handler without running the handler again: now the handler starts over with the answer, so what it did before the dialog happens twice.
 - An English UI and error explanations.
 
 ## License

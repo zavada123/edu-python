@@ -1,5 +1,5 @@
 import type { Library } from "./library.ts";
-import { type Chunk, type EventRequest, type RunRequest, type TurtleOp } from "./protocol.ts";
+import { type Chunk, type EventRequest, type ProgramFile, type RunRequest, type TurtleOp } from "./protocol.ts";
 /** Receives the output of a run while the program works. */
 export interface EngineSink {
     readonly chunk: (chunk: Chunk) => void;
@@ -11,6 +11,10 @@ export interface EngineSink {
     /** `after(ms, ...)`: the caller sends `Timer` with this id after `ms`, while the program waits for events. */
     readonly timer: (id: number, ms: number) => void;
     readonly cancelTimer: (id: number) => void;
+    /** A picture of `PhotoImage` is new or changed (JSON). */
+    readonly image: (json: string) => void;
+    /** The program saved a file through a "Save" dialog. */
+    readonly download: (file: ProgramFile) => void;
     /** Called once when the output gets to `MaxOutputChars`. The program can still work: the caller stops it. */
     readonly overflow: () => void;
 }
@@ -18,6 +22,11 @@ export type RunResult = {
     readonly _tag: "Finished";
 } | {
     readonly _tag: "NeedInput";
+}
+/** A dialog of `tkinter` waits for the student: the caller asks and runs the request again with the answer. */
+ | {
+    readonly _tag: "Asking";
+    readonly dialog: string;
 }
 /** The program is at `mainloop()`: its windows wait for user actions (`event`). */
  | {

@@ -110,17 +110,46 @@ export type TkInput =
   | { readonly _tag: "Shown"; readonly widget: number }
   /** A timer of `after()` (the worker sends it itself). */
   | { readonly _tag: "Timer"; readonly timer: number }
+  /** The student selected text in a Text: offsets in characters (code points), `caret` is the cursor. */
+  | { readonly _tag: "Selection"; readonly widget: number; readonly start: number; readonly end: number; readonly caret: number }
+  /** The student chose rows of a Listbox or a value of a Combobox: their numbers. */
+  | { readonly _tag: "Pick"; readonly widget: number; readonly items: ReadonlyArray<number> }
+  /** An arrow of a Spinbox. */
+  | { readonly _tag: "Spin"; readonly widget: number; readonly up: boolean }
+  /** A command of a menu: `widget` is the Menu, `index` the number of the entry. */
+  | { readonly _tag: "MenuItem"; readonly widget: number; readonly index: number }
+  /** The student copied or cut text in a field: `clipboard_get()` gives it. */
+  | { readonly _tag: "Clipboard"; readonly text: string }
 
 /** Place and size of a window or widget on the page, for `winfo_…`: id, x, y, width, height. */
 export type TkBox = readonly [id: number, x: number, y: number, width: number, height: number]
 
-export interface EventRequest {
+/**
+ * A file that the student gave to the program in an "Open" dialog (`tkinter.filedialog`). The engine writes
+ * it to the folder of the program before the run. `name` has no folders (`safeFileName`).
+ */
+export interface ProgramFile {
+  readonly name: string
+  readonly data: Uint8Array
+}
+
+/**
+ * Answers to the dialogs of `tkinter` that wait for the student (askyesno, askstring, askopenfilename…), in
+ * the order the program asks. A dialog without an answer stops the run with `Asking`; the page asks and
+ * sends the same request again with one more answer, as with `input()`. Each answer is JSON.
+ */
+export interface Answers {
+  readonly answers?: ReadonlyArray<string>
+  readonly files?: ReadonlyArray<ProgramFile>
+}
+
+export interface EventRequest extends Answers {
   readonly _tag: "Event"
   readonly input: TkInput
   readonly layout: ReadonlyArray<TkBox>
 }
 
-export interface RunRequest {
+export interface RunRequest extends Answers {
   readonly _tag: "Run"
   readonly code: string
   readonly inputs: ReadonlyArray<string>
@@ -142,6 +171,10 @@ export type WorkerMessage =
     readonly ops: ReadonlyArray<TurtleOp>
     readonly scenes: ReadonlyArray<string>
     readonly dialogs: ReadonlyArray<string>
+    /** Pictures of `PhotoImage` that are new or changed (JSON of `tkinter/_images.py`). */
+    readonly images?: ReadonlyArray<string>
+    /** Files that the program saved through a "Save" dialog: the page offers to download them. */
+    readonly downloads?: ReadonlyArray<ProgramFile>
   }
   /** The worker calls the handlers of one user action or timer: the time limit counts from this message. */
   | { readonly _tag: "Handling" }
@@ -149,6 +182,12 @@ export type WorkerMessage =
   | { readonly _tag: "Waiting" }
   | { readonly _tag: "Finished" }
   | { readonly _tag: "NeedInput" }
+  /**
+   * A dialog waits for the student (JSON of the question, `tkinter/_core.py` `ask`). `event`: the user action
+   * or timer whose handler asks; null when the program asks before `mainloop()`. The page sends it again
+   * (or runs the program again) with one more answer.
+   */
+  | { readonly _tag: "Asking"; readonly dialog: string; readonly event: EventRequest | null }
   /** Uncaught Python exception: the traceback text as MicroPython prints it. */
   | { readonly _tag: "Failed"; readonly traceback: string }
   | { readonly _tag: "OutputLimit" }
@@ -166,6 +205,20 @@ export const inputLines = (input: string): ReadonlyArray<string> => {
   const lines = input.replace(/\r\n?/g, "\n").split("\n")
   if (lines.at(-1) === "") lines.pop()
   return lines
+}
+
+/** Largest file that the student can give to a program, and that a program can give to the student. */
+export const MaxFileBytes = 2 * 1024 * 1024
+
+/**
+ * A file name for the folder of the program: no folders, no control characters, no hidden files. `null`
+ * when nothing is left. The same name goes to the `download` of a link on the page.
+ */
+export const safeFileName = (name: string): string | null => {
+  const base = name.split(/[\\/]/).at(-1) ?? ""
+  const clean = base.replace(/[\u0000-\u001f\u007f<>:"|?*]/g, "").trim().slice(0, 120)
+  if (clean === "" || clean === "." || clean === ".." || clean.startsWith(".")) return null
+  return clean
 }
 
 /** The seed of `random` in task tests: the same output on every check. */

@@ -36,6 +36,49 @@ class _App:
         self.pointer = (0, 0)
         self.radio_var = None
         self.next_var = 0
+        self.clipboard = ""
+        self.images = {}  # PhotoImage by number (`_images.py`)
+        self.next_image = 1
+        self.dirty_images = []
+        self.downloads = []  # files that the program saved through `filedialog`: the page offers to download them
+        self.answers = _answers()
+        self.answer_at = 0
+
+
+class _Ask(BaseException):
+    # A dialog that waits for an answer of the student (`ask`). BaseException: `except Exception` in student
+    # code does not catch it. The page shows the dialog, then runs the program (or the handler) again with
+    # one more answer, as with `input()` (protocol.ts).
+    def __init__(self, spec):
+        self.spec = spec
+
+
+def _decode(text):
+    try:
+        return json.loads(text)
+    except ValueError:
+        return None
+
+
+def _answers():
+    # A list of JSON texts, one for each dialog (protocol.ts `Answers`).
+    found = _decode(_mriya.answers() or "[]")
+    return [_decode(item) if isinstance(item, str) else None for item in found] if isinstance(found, list) else []
+
+
+def ask(spec):
+    """The answer of the student to the dialog `spec` (JSON): from the answers of this run, or the page asks."""
+    if app.answer_at < len(app.answers):
+        answer = app.answers[app.answer_at]
+        app.answer_at += 1
+        return answer
+    raise _Ask(spec)
+
+
+def new_answers():
+    """A user action comes with its own answers: the handlers ask again from the first one."""
+    app.answers = _answers()
+    app.answer_at = 0
 
 
 app = _App()
@@ -45,8 +88,24 @@ def touch():
     app.dirty = True
 
 
+def send_files():
+    """Saved files go to the page, so the student can download them."""
+    for path, handle in app.downloads:
+        if handle is not None:
+            try:
+                handle.flush()
+            except (OSError, ValueError):
+                pass
+        _mriya.tk_download(path)
+    app.downloads = []
+
+
 def flush():
     """Sends the windows to the page if something changed."""
+    send_files()
+    for image in app.dirty_images:
+        _mriya.tk_image(json.dumps(image._image_scene()))
+    app.dirty_images = []
     if not app.dirty:
         return
     app.dirty = False
@@ -386,10 +445,24 @@ class Misc:
         pass
 
     def clipboard_clear(self, **kw):
-        pass
+        app.clipboard = ""
 
     def clipboard_append(self, string, **kw):
-        pass
+        app.clipboard += _style.tcl_text(string)
+
+    def clipboard_get(self, **kw):
+        if app.clipboard == "":
+            raise TclError("CLIPBOARD selection doesn't exist or form \"STRING\" not defined")
+        return app.clipboard
+
+    def selection_get(self, **kw):
+        for widget in app.widgets:
+            found = getattr(widget, "_selected_text", None)
+            if found is not None:
+                text = found()
+                if text:
+                    return text
+        raise TclError("PRIMARY selection doesn't exist or form \"STRING\" not defined")
 
     # ── containers ──
 

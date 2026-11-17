@@ -7,7 +7,22 @@
 import { hideJavaScript } from "./wall.ts"
 import { loadMicroPython, type MicroPython } from "@micropython/micropython-webassembly-pyscript"
 import type { Library } from "./library.ts"
-import { type Chunk, ChunkKinds, type EventRequest, MaxOutputChars, MaxSceneChars, type RunRequest, type TurtleOp, type ValueKind, ValueKinds } from "./protocol.ts"
+import { imageOf } from "./images.ts"
+import {
+  type Answers,
+  type Chunk,
+  ChunkKinds,
+  type EventRequest,
+  MaxFileBytes,
+  MaxOutputChars,
+  MaxSceneChars,
+  type ProgramFile,
+  type RunRequest,
+  safeFileName,
+  type TurtleOp,
+  type ValueKind,
+  ValueKinds
+} from "./protocol.ts"
 
 /** Receives the output of a run while the program works. */
 export interface EngineSink {
@@ -20,6 +35,10 @@ export interface EngineSink {
   /** `after(ms, ...)`: the caller sends `Timer` with this id after `ms`, while the program waits for events. */
   readonly timer: (id: number, ms: number) => void
   readonly cancelTimer: (id: number) => void
+  /** A picture of `PhotoImage` is new or changed (JSON). */
+  readonly image: (json: string) => void
+  /** The program saved a file through a "Save" dialog. */
+  readonly download: (file: ProgramFile) => void
   /** Called once when the output gets to `MaxOutputChars`. The program can still work: the caller stops it. */
   readonly overflow: () => void
 }
@@ -27,6 +46,8 @@ export interface EngineSink {
 export type RunResult =
   | { readonly _tag: "Finished" }
   | { readonly _tag: "NeedInput" }
+  /** A dialog of `tkinter` waits for the student: the caller asks and runs the request again with the answer. */
+  | { readonly _tag: "Asking"; readonly dialog: string }
   /** The program is at `mainloop()`: its windows wait for user actions (`event`). */
   | { readonly _tag: "Waiting" }
   | { readonly _tag: "Failed"; readonly traceback: string }
@@ -49,6 +70,8 @@ export const silentSink: EngineSink = {
   dialog: () => undefined,
   timer: () => undefined,
   cancelTimer: () => undefined,
+  image: () => undefined,
+  download: () => undefined,
   overflow: () => undefined
 }
 
@@ -72,6 +95,17 @@ export interface EngineSources {
   readonly library: Library
 }
 
+/** Bytes of base64 text, or null when it is not base64. */
+const fromBase64 = (value: string): Uint8Array | null => {
+  const clean = value.replace(/\s+/g, "")
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(clean)) return null
+  try {
+    return Uint8Array.from(atob(clean), (c) => c.charCodeAt(0))
+  } catch {
+    return null
+  }
+}
+
 const directory = (path: string): string => path.slice(0, Math.max(0, path.lastIndexOf("/")))
 
 export const loadEngine = async (sources: EngineSources): Promise<Engine> => {
@@ -83,6 +117,9 @@ export const loadEngine = async (sources: EngineSources): Promise<Engine> => {
   let pending: Array<number> = []
   let written = 0
   let decoder = new TextDecoder()
+  let answers = "[]"
+  /** Set by `tk_ask`: the dialog that waits for the student. */
+  let asking: string | null = null
 
   const emit = (chunk: Chunk): void => {
     if (written >= MaxOutputChars) return
@@ -164,6 +201,31 @@ export const loadEngine = async (sources: EngineSources): Promise<Engine> => {
     },
     tk_cancel: (id: unknown) => {
       sink.cancelTimer(num(id))
+    },
+    /** Answers of the dialogs for this run or action (JSON list of JSON texts, `_core.py`). */
+    answers: (): string => answers,
+    tk_ask: (json: unknown) => {
+      flush()
+      asking = text(json)
+    },
+    tk_image: (json: unknown) => {
+      sink.image(text(json))
+    },
+    /** A picture file of the program folder for `PhotoImage(file=…)`: JSON, "missing" or "unknown". */
+    file_image: (path: unknown): string => {
+      const bytes = readFile(text(path))
+      if (bytes === null) return "missing"
+      return imageOf(bytes) ?? "unknown"
+    },
+    /** `PhotoImage(data=…)`: base64 of a PNG or GIF file. */
+    data_image: (base64: unknown): string => {
+      const bytes = fromBase64(text(base64))
+      return bytes === null ? "unknown" : imageOf(bytes) ?? "unknown"
+    },
+    tk_download: (path: unknown) => {
+      const name = safeFileName(text(path))
+      const bytes = readFile(text(path))
+      if (name !== null && bytes !== null && bytes.length <= MaxFileBytes) sink.download({ name, data: bytes })
     }
   })
   for (const [path, module] of Object.entries(sources.library)) {
@@ -173,6 +235,27 @@ export const loadEngine = async (sources: EngineSources): Promise<Engine> => {
   python.runPython(sources.prelude)
   // Student code gets no JavaScript globals (`wall.ts`). Without the wall the engine does not run programs.
   if (!hideJavaScript()) throw new Error("the engine cannot hide JavaScript from Python")
+
+  /** Bytes of a file of the program, or null. Only files: not folders. */
+  function readFile(path: string): Uint8Array | null {
+    try {
+      const found = python.FS.analyzePath(path)
+      if (!found.exists || found.object === null || python.FS.isDir(found.object.mode)) return null
+      return python.FS.readFile(path)
+    } catch {
+      return null
+    }
+  }
+
+  /** Files that the student gave to the program go to its folder; the answers wait for its dialogs. */
+  const answer = (request: Answers): void => {
+    answers = JSON.stringify(request.answers ?? [])
+    asking = null
+    for (const file of request.files ?? []) {
+      const name = safeFileName(file.name)
+      if (name !== null && file.data.length <= MaxFileBytes) python.FS.writeFile(`/${name}`, file.data)
+    }
+  }
 
   const prepare = (request: RunRequest, runSink: EngineSink): void => {
     sink = runSink
@@ -192,12 +275,14 @@ export const loadEngine = async (sources: EngineSources): Promise<Engine> => {
     const waits = python.globals.get("_mriya_waits") === true
     sink = silentSink
     if (input.needed) return { _tag: "NeedInput" }
+    if (asking !== null) return { _tag: "Asking", dialog: asking }
     if (traceback !== "") return { _tag: "Failed", traceback }
     return waits ? { _tag: "Waiting" } : { _tag: "Finished" }
   }
 
   const run = (request: RunRequest, runSink: EngineSink): RunResult => {
     prepare(request, runSink)
+    answer(request)
     return finish(`_mriya_result = _mriya_run(_mriya.source(), ${Math.trunc(request.seed)})`)
   }
 
@@ -207,6 +292,7 @@ export const loadEngine = async (sources: EngineSources): Promise<Engine> => {
     source = JSON.stringify({ input: request.input, layout: request.layout })
     inputs = []
     input.needed = false
+    answer(request)
     return finish("_mriya_result = _mriya_event(_mriya.source())")
   }
 

@@ -204,3 +204,40 @@
 .epy-tk-dialog__buttons { display: flex; justify-content: flex-end; padding: 10px 12px; background: var(--tk-face); }
 .epy-tk-button { min-width: 75px; padding: 4px 12px; border: 1px solid var(--tk-accent); background: var(--tk-button); color: inherit; font: inherit; }
 .epy-tk-button:hover { background: var(--tk-button-hover); }
+
+/* Menus and drop-down lists of tkinter windows (tk-menus.tsx, tk-lists.tsx) */
+.epy-tk-menubar { display: flex; flex-wrap: wrap; background: var(--tk-paper); border-bottom: 1px solid var(--tk-face); }
+.epy-tk-menubar__item { padding: 3px 8px; border: 0; background: transparent; color: inherit; font: inherit; }
+.epy-tk-menubar__item:hover:not(:disabled), .epy-tk-menubar__item[aria-expanded="true"] { background: var(--tk-button-hover); }
+.epy-tk-popup {
+  z-index: 20; display: flex; flex-direction: column; padding: 2px; border: 1px solid var(--tk-frame); background: var(--tk-paper);
+  color: var(--tk-text); font: 12px "Segoe UI", system-ui, sans-serif; box-shadow: 0 4px 10px rgb(0 0 0 / 0.2);
+}
+.epy-tk-popup__item { display: flex; align-items: center; gap: 6px; padding: 3px 8px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; white-space: pre; cursor: pointer; }
+.epy-tk-popup__item:hover:not(:disabled), .epy-tk-popup__item[aria-selected="true"] { background: var(--tk-button-hover); }
+.epy-tk-popup__item:disabled { color: var(--tk-shadow); cursor: default; }
+.epy-tk-menu__mark { display: inline-flex; justify-content: center; width: 14px; flex: none; }
+.epy-tk-menu__label { flex: 1; }
+.epy-tk-menu__accelerator { display: inline-flex; margin-left: 24px; color: var(--epy-muted-text, var(--tk-shadow)); }
+.epy-tk-menu__separator { height: 1px; margin: 3px 4px; background: var(--tk-shadow); }
+
+/* Dialogs that wait for the student and saved files (tk-dialogs.tsx) */
+.epy-tk-area:has(.epy-tk-ask) { min-height: 340px; }
+.epy-tk-ask { width: min(26rem, 100%); }
+.epy-tk-ask__body { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; }
+.epy-tk-ask__row { display: flex; align-items: center; gap: 8px; }
+.epy-tk-ask__field { min-width: 0; flex: 1; padding: 3px 4px; border: 1px solid var(--tk-shadow); background: var(--tk-paper); color: var(--tk-text); font: inherit; }
+.epy-tk-ask__color { width: 48px; height: 28px; padding: 0; border: 1px solid var(--tk-shadow); background: transparent; }
+.epy-tk-ask__error { color: var(--tk-close); }
+.epy-tk-ask__empty { margin: 0; color: var(--tk-shadow); }
+.epy-tk-ask__files { display: flex; flex-direction: column; max-height: 10rem; overflow: auto; border: 1px solid var(--tk-shadow); background: var(--tk-paper); }
+.epy-tk-ask__file { display: flex; align-items: center; gap: 6px; padding: 3px 6px; cursor: pointer; overflow-wrap: anywhere; }
+.epy-tk-ask__file[aria-selected="true"] { background: var(--tk-accent); color: var(--tk-paper); }
+.epy-tk-ask__upload { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; }
+.epy-tk-dialog__buttons { gap: 8px; }
+.epy-tk-dialog__buttons .epy-tk-button:disabled { opacity: 0.5; }
+.epy-tk-downloads { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.epy-tk-downloads__item { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--tk-shadow); background: var(--tk-paper); color: var(--tk-text); }
+.epy-tk-downloads__text { flex: 1; min-width: 10rem; overflow-wrap: anywhere; }
+.epy-tk-downloads__button { display: inline-flex; align-items: center; gap: 6px; }
+.epy-tk-downloads__close { display: inline-flex; padding: 4px; border: 0; background: transparent; color: inherit; }

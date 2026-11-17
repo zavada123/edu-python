@@ -196,6 +196,10 @@ class Widget(Misc):
         return _style.tcl_text(self._opts.get("text", ""))
 
     def _changed(self, name, old, value):
+        if name == "image":
+            from tkinter._images import image_of
+
+            image_of(value)
         if name in ("textvariable", "variable"):
             if isinstance(old, Variable):
                 old._unlink(self)
@@ -244,9 +248,24 @@ class Widget(Misc):
                 "textwrap": str(opts.get("wrap", "char")),
                 "items": [],
                 "scale": None,
+                "image": self._image(),
+                "compound": str(opts.get("compound", "none")),
+                "textStyle": None,
+                "list": None,
+                "scroll": None,
+                "menu": None,
+                "opens": 0,
             }
         )
         return scene
+
+    def _image(self):
+        from tkinter._images import image_of
+
+        try:
+            return image_of(self._opts.get("image", ""))
+        except TclError:
+            return 0
 
 
 _LABEL_OPTIONS = dict(BASE_OPTIONS)
@@ -464,12 +483,4 @@ def _unsupported(name):
     return create
 
 
-Listbox = _unsupported("Listbox")
-Spinbox = _unsupported("Spinbox")
-Menu = _unsupported("Menu")
-Menubutton = _unsupported("Menubutton")
-OptionMenu = _unsupported("OptionMenu")
-Scrollbar = _unsupported("Scrollbar")
 PanedWindow = _unsupported("PanedWindow")
-PhotoImage = _unsupported("PhotoImage")
-BitmapImage = _unsupported("BitmapImage")

@@ -44,6 +44,8 @@ _X11 = {
     "systemdisabledtext": "#6d6d6d",
     "systemscrollbar": "#c8c8c8",
     "systemwindowframe": "#646464",
+    "systemmenu": "#f0f0f0",
+    "systemmenutext": "#000000",
 }
 
 _HEX = "0123456789abcdefABCDEF"

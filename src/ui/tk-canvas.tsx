@@ -4,6 +4,7 @@ import { TkIdAttribute, TkItemAttribute } from "../core/tk-input.ts"
 import { TkBindKinds, type TkItem, TkItemTypes, type TkWidget, waitsFor } from "../core/tk-scene.ts"
 import { useTk } from "./tk-context.ts"
 import { useWidgetEvents } from "./tk-events.ts"
+import { TkCanvasPicture } from "./tk-image.tsx"
 
 // Canvas of tkinter as SVG. Coordinates are the same as in Tk: (0; 0) is the top left corner of the
 // canvas, y goes down. Figures are drawn in the order of the canvas: later figures are on top.
@@ -167,6 +168,7 @@ function CanvasItem(props: Readonly<{ item: TkItem }>): ReactNode {
       <path {...id} d={arcPath(item)} fill={item.style === "arc" ? "none" : paint(item.fill)} {...stroke(item, item.outline)} />
     )),
     Match.when(TkItemTypes.Text, () => <TextItem item={item} />),
+    Match.when(TkItemTypes.Image, () => <TkCanvasPicture id={item.image} x={item.coords[0] ?? 0} y={item.coords[1] ?? 0} anchor={item.anchor} item={item.id} />),
     Match.exhaustive
   )
 }

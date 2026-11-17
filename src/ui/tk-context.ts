@@ -2,12 +2,14 @@ import { Option } from "effect"
 import { createContext, useContext } from "react"
 import type { TkInput } from "../engine/protocol.ts"
 import type { PressMemory } from "../core/tk-input.ts"
-import type { TkScene, TkWindow } from "../core/tk-scene.ts"
+import type { TkImage, TkScene, TkWindow } from "../core/tk-scene.ts"
 
 // What the widgets of a tkinter window need: the scene, the way to send user actions, and their window.
 
 export interface TkContextValue {
   readonly scene: TkScene
+  /** Pictures of `PhotoImage` by number. */
+  readonly images: ReadonlyMap<number, TkImage>
   /** The program waits for user actions: the window is not frozen. */
   readonly active: boolean
   readonly send: (input: TkInput) => void

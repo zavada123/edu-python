@@ -5,8 +5,19 @@
  */
 import { Option } from "effect"
 import { explainError, type ProgramError } from "./errors.ts"
-import { decodeDialog, decodeScene, type TkDialog, type TkScene } from "./tk-scene.ts"
-import { type Chunk, MouseKinds, TimeLimitMs, type TkBox, type TkInput, type TurtleOp, type WorkerMessage, type WorkerRequest } from "../engine/protocol.ts"
+import { decodeAsk, decodeDialog, decodeImage, decodeScene, type TkAsk, type TkDialog, type TkImage, type TkScene } from "./tk-scene.ts"
+import {
+  type Chunk,
+  type EventRequest,
+  MouseKinds,
+  type ProgramFile,
+  TimeLimitMs,
+  type TkBox,
+  type TkInput,
+  type TurtleOp,
+  type WorkerMessage,
+  type WorkerRequest
+} from "../engine/protocol.ts"
 
 export const StopReasons = {
   User: "user",
@@ -24,6 +35,8 @@ export type RunStatus =
   | { readonly _tag: "WaitingInput" }
   /** The windows of a tkinter program wait for user actions. */
   | { readonly _tag: "Window" }
+  /** A dialog of tkinter (askyesno, askopenfilename…) waits for the answer of the student. */
+  | { readonly _tag: "Asking"; readonly ask: TkAsk }
   | { readonly _tag: "Finished" }
   | { readonly _tag: "Failed"; readonly error: ProgramError }
   | { readonly _tag: "Stopped"; readonly reason: StopReason }
@@ -36,9 +49,16 @@ export interface RunView {
   readonly scene: Option.Option<TkScene>
   /** Message windows that wait for "OK": the first one is shown. */
   readonly dialogs: ReadonlyArray<TkDialog>
+  /** Pictures of `PhotoImage` by number. */
+  readonly images: ReadonlyMap<number, TkImage>
+  /** Files that the program saved: the student can download them. One file for each name, the last one. */
+  readonly downloads: ReadonlyArray<ProgramFile>
 }
 
-export const idleView: RunView = { status: { _tag: "Idle" }, chunks: [], ops: [], scene: Option.none(), dialogs: [] }
+export const idleView: RunView = { status: { _tag: "Idle" }, chunks: [], ops: [], scene: Option.none(), dialogs: [], images: new Map(), downloads: [] }
+
+/** A dialog that the engine sent but the page cannot read: the student can only close it. */
+const brokenAsk: TkAsk = { kind: "question", title: "", message: "", buttons: ["ok"] }
 
 /** The worker as the session sees it: `worker.ts` in the browser, a fake in tests. */
 export interface WorkerPort {
@@ -55,6 +75,13 @@ export interface RunSession {
   readonly send: (input: TkInput, layout: ReadonlyArray<TkBox>) => void
   /** The student clicked "OK" in the first message window. */
   readonly closeDialog: () => void
+  /**
+   * The answer to the dialog of `Asking` (JSON value; null when the student closed it). `files`: files that
+   * the student gave to the program in an "Open" dialog.
+   */
+  readonly answer: (value: unknown, files?: ReadonlyArray<ProgramFile>) => void
+  /** The student downloaded or closed the offer of a saved file. */
+  readonly dismissDownload: (name: string) => void
   readonly stop: () => void
   /** The page closes the runner: the worker is stopped, its messages are not used. */
   readonly dispose: () => void
@@ -78,6 +105,10 @@ export const createRunSession = (createWorker: WorkerFactory, onChange: (view: R
   let segmentOps: Array<TurtleOp> = []
   /** User actions that the worker did not finish yet. Pointer moves are dropped while it is busy. */
   let pending = 0
+  /** Answers to the dialogs of the run (before `mainloop()`), sent with each replay. */
+  let runAnswers: Array<string> = []
+  /** The user action whose handler asks, with the answers so far; null when the run itself asks. */
+  let asker: EventRequest | null = null
 
   const publish = (next: RunView): void => {
     view = next
@@ -129,6 +160,16 @@ export const createRunSession = (createWorker: WorkerFactory, onChange: (view: R
     }
   }
 
+  const imagesAfter = (images: ReadonlyArray<string>): ReadonlyMap<number, TkImage> => {
+    if (images.length === 0) return view.images
+    const next = new Map(view.images)
+    for (const json of images) Option.map(decodeImage(json), (image) => next.set(image.id, image))
+    return next
+  }
+
+  const downloadsAfter = (files: ReadonlyArray<ProgramFile>): ReadonlyArray<ProgramFile> =>
+    files.length === 0 ? view.downloads : [...view.downloads.filter((d) => !files.some((f) => f.name === d.name)), ...files]
+
   const done = (): void => {
     pending = Math.max(0, pending - 1)
   }
@@ -149,9 +190,15 @@ export const createRunSession = (createWorker: WorkerFactory, onChange: (view: R
           chunks: segmentChunks.length >= view.chunks.length ? segmentChunks : view.chunks,
           ops: segmentOps.length >= view.ops.length ? segmentOps : view.ops,
           scene: sceneAfter(message.scenes),
-          dialogs: dialogs.length === 0 ? view.dialogs : [...view.dialogs, ...dialogs]
+          dialogs: dialogs.length === 0 ? view.dialogs : [...view.dialogs, ...dialogs],
+          images: imagesAfter(message.images ?? []),
+          downloads: downloadsAfter(message.downloads ?? [])
         })
       }
+      case "Asking":
+        asker = message.event
+        if (asker !== null) done()
+        return finish({ _tag: "Asking", ask: Option.getOrElse(decodeAsk(message.dialog), () => brokenAsk) })
       case "Waiting":
         done()
         return finish({ _tag: "Window" })
@@ -184,36 +231,63 @@ export const createRunSession = (createWorker: WorkerFactory, onChange: (view: R
     segmentChunks = []
     segmentOps = []
     publish({ ...view, status: { _tag: "Loading" } })
-    workerNow().post({ _tag: "Run", code, inputs: [...inputs], seed })
+    workerNow().post({ _tag: "Run", code, inputs: [...inputs], seed, answers: [...runAnswers], files })
+  }
+
+  /** Files of the last answer: the engine writes them once. */
+  let files: ReadonlyArray<ProgramFile> = []
+
+  const postEvent = (request: EventRequest): void => {
+    if (worker === null) return
+    pending++
+    worker.post(request)
   }
 
   return {
     start: (source) => {
       // A window program keeps its state in the worker: a new run gets a new worker.
-      if (isBusy(view.status) || view.status._tag === "Window") kill()
+      if (isBusy(view.status) || view.status._tag === "Window" || view.status._tag === "Asking") kill()
       pending = 0
       code = source
       seed = Math.floor(Math.random() * MaxSeed)
       inputs = []
+      runAnswers = []
+      files = []
+      asker = null
       view = idleView
       segment()
     },
     provideInput: (value) => {
       if (view.status._tag !== "WaitingInput") return
       inputs = [...inputs, value]
+      files = []
       segment()
     },
     send: (input, layout) => {
       if (view.status._tag !== "Window" || worker === null) return
       if (input._tag === "Mouse" && input.kind === MouseKinds.Motion && pending > 0) return
-      pending++
-      worker.post({ _tag: "Event", input, layout })
+      postEvent({ _tag: "Event", input, layout, answers: [] })
+    },
+    answer: (value, given = []) => {
+      if (view.status._tag !== "Asking") return
+      const json = JSON.stringify(value ?? null)
+      if (asker === null) {
+        runAnswers = [...runAnswers, json]
+        files = given
+        return segment()
+      }
+      const request: EventRequest = { ...asker, answers: [...(asker.answers ?? []), json], files: given }
+      publish({ ...view, status: { _tag: "Running" } })
+      postEvent(request)
+    },
+    dismissDownload: (name) => {
+      publish({ ...view, downloads: view.downloads.filter((d) => d.name !== name) })
     },
     closeDialog: () => {
       if (view.dialogs.length > 0) publish({ ...view, dialogs: view.dialogs.slice(1) })
     },
     stop: () => {
-      if (isBusy(view.status) || view.status._tag === "Window") return halt(StopReasons.User)
+      if (isBusy(view.status) || view.status._tag === "Window" || view.status._tag === "Asking") return halt(StopReasons.User)
       // The worker is free while it waits for input: it is kept for the next run.
       if (view.status._tag === "WaitingInput") finish({ _tag: "Stopped", reason: StopReasons.User })
     },

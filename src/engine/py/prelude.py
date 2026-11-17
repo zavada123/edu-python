@@ -2,6 +2,7 @@
 # `_mriya_run` and `_mriya_event` return the traceback text of an uncaught exception, or an empty string.
 import builtins
 import io
+import json as _json
 import random
 import sys
 
@@ -82,6 +83,13 @@ def _traceback(error):
     return text.getvalue()
 
 
+def _tk_files():
+    # A program without `mainloop()` saved a file through `filedialog`: the page offers to download it.
+    tk = _tkinter()
+    if tk is not None:
+        tk._send_files()
+
+
 def _mriya_run(source, seed):
     random.seed(seed)
     # A new run gets a new turtle and new windows: modules of the previous run are not kept.
@@ -91,6 +99,7 @@ def _mriya_run(source, seed):
     scope = {"__name__": "__main__"}
     try:
         exec(compile(source, "main.py", "exec"), scope)
+        _tk_files()
         return ""
     except _NeedInput:
         # The engine knows about it: `next_input` returned None.
@@ -102,6 +111,11 @@ def _mriya_run(source, seed):
         if tk is not None and isinstance(error, tk._MainLoop):
             # `mainloop()`: the windows wait for the user (`_mriya_waiting`).
             return ""
+        if tk is not None and isinstance(error, tk._Ask):
+            # A dialog before `mainloop()`: the page asks, then runs the program again with the answer.
+            _mriya.tk_ask(_json.dumps(error.spec))
+            return ""
+        _tk_files()
         return _traceback(error)
 
 
