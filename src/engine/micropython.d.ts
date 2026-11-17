@@ -14,7 +14,13 @@ declare module "@micropython/micropython-webassembly-pyscript" {
 
   export interface MicroPython {
     readonly globals: { get(name: string): unknown }
-    readonly FS: { writeFile(path: string, data: string): void; mkdirTree(path: string): void }
+    readonly FS: {
+      writeFile(path: string, data: string | Uint8Array): void
+      readFile(path: string): Uint8Array
+      mkdirTree(path: string): void
+      analyzePath(path: string): { readonly exists: boolean; readonly object: { readonly mode: number } | null }
+      isDir(mode: number): boolean
+    }
     registerJsModule(name: string, module: object): void
     runPython(code: string): unknown
   }

@@ -1,5 +1,5 @@
-# Fields where the student types or chooses a value: Entry, Text and Scale. The page sends the new text or
-# value as an Edit event (`_page.py`).
+# Fields where the student types or chooses a value: Entry and Scale (Text is in `_text.py`). The page sends
+# the new text or value as an Edit event (`_page.py`).
 from tkinter import _core, _style
 from tkinter._core import BASE_OPTIONS, TclError, touch
 from tkinter._vars import Variable
@@ -38,6 +38,20 @@ _ENTRY_OPTIONS.update(
 )
 
 
+class Linked:
+    """A method of one widget that knows the widget: `command=text.yview` tells a Scrollbar what it scrolls.
+
+    MicroPython has no `__self__` of a bound method, so the widgets keep these objects as their attributes.
+    """
+
+    def __init__(self, owner, func):
+        self.owner = owner
+        self.func = func
+
+    def __call__(self, *args):
+        return self.func(self.owner, *args)
+
+
 class Entry(Widget):
     """A field for one line of text: `get()` gives the text that the student typed."""
 
@@ -48,6 +62,7 @@ class Entry(Widget):
 
     def _init(self):
         self._value = ""
+        self.xview = Linked(self, Entry._xview)
 
     def get(self):
         variable = self._opts.get("textvariable")
@@ -116,7 +131,14 @@ class Entry(Widget):
 
     selection_present = select_present
 
-    def xview(self, *args):
+    def _xview(self, *args):
+        if not args:
+            return (0.0, 1.0)
+
+    def xview_moveto(self, fraction):
+        pass
+
+    def xview_scroll(self, number, what):
         pass
 
     def _text(self):
@@ -130,168 +152,6 @@ class Entry(Widget):
         elif state == "readonly":
             scene["bg"] = _style.color(self._opts["readonlybackground"])
         return scene
-
-
-_TEXT_OPTIONS = dict(BASE_OPTIONS)
-_TEXT_OPTIONS.update(
-    {
-        "autoseparators": 1,
-        "background": "SystemWindow",
-        "blockcursor": 0,
-        "borderwidth": 1,
-        "endline": "",
-        "exportselection": 1,
-        "font": "TkFixedFont",
-        "foreground": "SystemWindowText",
-        "height": 24,
-        "inactiveselectbackground": "SystemButtonFace",
-        "insertbackground": "SystemWindowText",
-        "insertborderwidth": 0,
-        "insertofftime": 300,
-        "insertontime": 600,
-        "insertunfocussed": "none",
-        "insertwidth": 2,
-        "maxundo": 0,
-        "padx": 1,
-        "pady": 1,
-        "relief": "sunken",
-        "selectbackground": "SystemHighlight",
-        "selectborderwidth": 0,
-        "selectforeground": "SystemHighlightText",
-        "setgrid": 0,
-        "spacing1": 0,
-        "spacing2": 0,
-        "spacing3": 0,
-        "startline": "",
-        "state": "normal",
-        "tabs": "",
-        "tabstyle": "tabular",
-        "undo": 0,
-        "width": 80,
-        "wrap": "char",
-        "xscrollcommand": "",
-        "yscrollcommand": "",
-    }
-)
-
-
-class Text(Widget):
-    """A field for many lines of text. Places are "line.column": "1.0" is the start, END is the end."""
-
-    _kind = "Text"
-    _class = "Text"
-    _defaults = _TEXT_OPTIONS
-    _states = ("disabled", "normal")
-
-    def _init(self):
-        self._value = ""
-
-    def _offset(self, index):
-        text = self._value
-        name = str(index) if not isinstance(index, float) else "%.1f" % index
-        shift = 0
-        for sign in ("+", "-"):
-            at = name.find(sign, 1)
-            if at > 0:
-                change = name[at + 1 :].strip()
-                for unit in ("chars", "char", "c"):
-                    if change.endswith(unit):
-                        change = change[: -len(unit)].strip()
-                        break
-                if not change.isdigit():
-                    raise TclError('bad text index "%s"' % name)
-                shift = int(change) if sign == "+" else -int(change)
-                name = name[:at].strip()
-        if name in ("end", "insert", "current"):
-            base = len(text) + 1
-        elif "." in name:
-            line_text, column_text = name.split(".", 1)
-            if not line_text.isdigit() or not (column_text.isdigit() or column_text == "end"):
-                raise TclError('bad text index "%s"' % name)
-            lines = text.split("\n")
-            line = int(line_text)
-            if line < 1:
-                base = 0
-            elif line > len(lines):
-                base = len(text) + 1
-            else:
-                start = sum(len(lines[i]) + 1 for i in range(line - 1))
-                length = len(lines[line - 1])
-                column = length if column_text == "end" else min(int(column_text), length)
-                base = start + column
-        else:
-            raise TclError('bad text index "%s"' % name)
-        return max(0, min(base + shift, len(text) + 1))
-
-    def index(self, index):
-        offset = self._offset(index)
-        before = (self._value + "\n")[:offset]
-        line = before.count("\n") + 1
-        column = len(before) - (before.rfind("\n") + 1)
-        return "%d.%d" % (line, column)
-
-    def get(self, index1, index2=None):
-        whole = self._value + "\n"
-        start = self._offset(index1)
-        end = start + 1 if index2 is None else self._offset(index2)
-        return whole[start:end] if end > start else ""
-
-    def _editable(self):
-        return str(self._opts["state"]) == "normal"
-
-    def insert(self, index, chars, *args):
-        if not self._editable():
-            return
-        at = min(self._offset(index), len(self._value))
-        self._value = self._value[:at] + _style.tcl_text(chars) + self._value[at:]
-        self._rev += 1
-        touch()
-
-    def delete(self, index1, index2=None):
-        if not self._editable():
-            return
-        start = min(self._offset(index1), len(self._value))
-        end = start + 1 if index2 is None else self._offset(index2)
-        end = min(end, len(self._value))
-        if end > start:
-            self._value = self._value[:start] + self._value[end:]
-            self._rev += 1
-            touch()
-
-    def _edit(self, text):
-        self._value = text
-        touch()
-
-    def see(self, index):
-        pass
-
-    def mark_set(self, markName, index):
-        pass
-
-    def tag_add(self, tagName, index1, *args):
-        pass
-
-    def tag_remove(self, tagName, index1, index2=None):
-        pass
-
-    def tag_configure(self, tagName, cnf=None, **kw):
-        pass
-
-    tag_config = tag_configure
-
-    def edit_reset(self):
-        pass
-
-    def edit_modified(self, arg=None):
-        return False
-
-    def yview(self, *args):
-        pass
-
-    xview = yview
-
-    def _text(self):
-        return self._value
 
 
 _SCALE_OPTIONS = dict(BASE_OPTIONS)

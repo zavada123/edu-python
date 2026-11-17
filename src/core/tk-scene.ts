@@ -14,7 +14,13 @@ export const TkWidgetKinds = {
   Frame: "Frame",
   LabelFrame: "LabelFrame",
   Canvas: "Canvas",
-  Scale: "Scale"
+  Scale: "Scale",
+  Listbox: "Listbox",
+  Spinbox: "Spinbox",
+  Combobox: "Combobox",
+  Scrollbar: "Scrollbar",
+  Menu: "Menu",
+  Menubutton: "Menubutton"
 } as const
 export const TkWidgetKind = Schema.Literals(Object.values(TkWidgetKinds))
 export type TkWidgetKind = typeof TkWidgetKind.Type
@@ -23,7 +29,15 @@ export const TkManagerKinds = { Pack: "pack", Grid: "grid", Place: "place", None
 export const TkManagerKind = Schema.Literals(Object.values(TkManagerKinds))
 export type TkManagerKind = typeof TkManagerKind.Type
 
-export const TkItemTypes = { Line: "line", Rectangle: "rectangle", Oval: "oval", Polygon: "polygon", Arc: "arc", Text: "text" } as const
+export const TkItemTypes = {
+  Line: "line",
+  Rectangle: "rectangle",
+  Oval: "oval",
+  Polygon: "polygon",
+  Arc: "arc",
+  Text: "text",
+  Image: "image"
+} as const
 export const TkItemType = Schema.Literals(Object.values(TkItemTypes))
 export type TkItemType = typeof TkItemType.Type
 
@@ -74,7 +88,9 @@ export const TkWindow = Schema.Struct({
   x: Schema.Number,
   y: Schema.Number,
   visible: Schema.Boolean,
-  decorated: Schema.Boolean
+  decorated: Schema.Boolean,
+  /** The Menu of the menu bar, or 0. */
+  menu: Schema.Number
 })
 export type TkWindow = typeof TkWindow.Type
 
@@ -130,7 +146,9 @@ export const TkItem = Schema.Struct({
   justify: Schema.String,
   wrap: Schema.Number,
   angle: Schema.Number,
-  hidden: Schema.Boolean
+  hidden: Schema.Boolean,
+  /** The PhotoImage of an image figure, or 0. */
+  image: Schema.Number
 })
 export type TkItem = typeof TkItem.Type
 
@@ -146,6 +164,57 @@ export const TkScale = Schema.Struct({
   trough: Schema.String
 })
 export type TkScale = typeof TkScale.Type
+
+/** A coloured part of a Text: start, end (characters), colour, background, CSS font, underline, overstrike. */
+const TkTextPart = Schema.Tuple([Schema.Number, Schema.Number, Schema.String, Schema.String, Schema.String, Schema.Boolean, Schema.Boolean])
+export type TkTextPart = typeof TkTextPart.Type
+
+/** Tags of a Text: the coloured parts and the selection that the program set (`selectionRev` grows then). */
+export const TkTextStyle = Schema.Struct({
+  parts: Schema.Array(TkTextPart),
+  selection: Schema.Tuple([Schema.Number, Schema.Number]),
+  selectionRev: Schema.Number,
+  selectionColor: Schema.String
+})
+export type TkTextStyle = typeof TkTextStyle.Type
+
+export const TkListModes = { Single: "single", Browse: "browse", Multiple: "multiple", Extended: "extended", Spin: "spin", Combo: "combo" } as const
+
+/** Rows of a Listbox (text, colour, background), or the values of a Spinbox or a Combobox. */
+export const TkList = Schema.Struct({
+  rows: Schema.Array(Schema.Tuple([Schema.String, Schema.String, Schema.String])),
+  chosen: Schema.Array(Schema.Number),
+  active: Schema.Number,
+  mode: Schema.String,
+  selectBg: Schema.String,
+  selectFg: Schema.String
+})
+export type TkList = typeof TkList.Type
+
+/** A Scrollbar: the widget that it scrolls (0: none). */
+export const TkScroll = Schema.Struct({ target: Schema.Number, vertical: Schema.Boolean, trough: Schema.String })
+export type TkScroll = typeof TkScroll.Type
+
+export const TkMenuEntryTypes = { Command: "command", Cascade: "cascade", Check: "checkbutton", Radio: "radiobutton", Separator: "separator" } as const
+
+export const TkMenuEntry = Schema.Struct({
+  type: Schema.String,
+  label: Schema.String,
+  accelerator: Schema.String,
+  enabled: Schema.Boolean,
+  checked: Schema.Boolean,
+  submenu: Schema.Number,
+  underline: Schema.Number,
+  fg: Schema.String
+})
+export type TkMenuEntry = typeof TkMenuEntry.Type
+
+/** A Menu; `posted`: x and y on the "screen" and the number of the post, after `tk_popup`. */
+export const TkMenu = Schema.Struct({
+  entries: Schema.Array(TkMenuEntry),
+  posted: Schema.NullOr(Schema.Tuple([Schema.Number, Schema.Number, Schema.Number]))
+})
+export type TkMenu = typeof TkMenu.Type
 
 /**
  * A widget. `width` and `height` are in characters and lines for Label, Button, Entry and Text (as in Tk),
@@ -173,7 +242,16 @@ export const TkWidget = Schema.Struct({
   show: Schema.String,
   textwrap: Schema.String,
   items: Schema.Array(TkItem),
-  scale: Schema.OptionFromNullOr(TkScale)
+  scale: Schema.OptionFromNullOr(TkScale),
+  /** The PhotoImage of a Label or a Button, or 0; `compound`: where the picture is beside the text. */
+  image: Schema.Number,
+  compound: Schema.String,
+  textStyle: Schema.OptionFromNullOr(TkTextStyle),
+  list: Schema.OptionFromNullOr(TkList),
+  scroll: Schema.OptionFromNullOr(TkScroll),
+  menu: Schema.OptionFromNullOr(TkMenu),
+  /** The Menu that a Menubutton opens, or 0. */
+  opens: Schema.Number
 })
 export type TkWidget = typeof TkWidget.Type
 
@@ -190,8 +268,50 @@ export type TkScene = typeof TkScene.Type
 export const TkDialog = Schema.Struct({ icon: TkDialogIcon, title: Schema.String, message: Schema.String })
 export type TkDialog = typeof TkDialog.Type
 
+/**
+ * A picture of `PhotoImage` (`tkinter/_images.py`): a PNG or GIF file (base64), and pixels that the program
+ * painted over it (rows of runs: colour, count…). `shownWidth`, `shownHeight`: with `zoom` and `subsample`.
+ */
+export const TkImage = Schema.Struct({
+  id: Schema.Number,
+  width: Schema.Number,
+  height: Schema.Number,
+  shownWidth: Schema.Number,
+  shownHeight: Schema.Number,
+  base: Schema.NullOr(Schema.Struct({ mime: Schema.Literals(["image/png", "image/gif"]), data: Schema.String })),
+  pixels: Schema.NullOr(Schema.Array(Schema.Array(Schema.Union([Schema.String, Schema.Number]))))
+})
+export type TkImage = typeof TkImage.Type
+
+export const TkAskKinds = { Question: "question", Value: "value", Color: "color", Open: "open", Save: "save" } as const
+
+/** A dialog that waits for the student (`tkinter/_core.py` `ask`): one shape for all kinds, fields by kind. */
+export const TkAsk = Schema.Struct({
+  kind: Schema.Literals(Object.values(TkAskKinds)),
+  title: Schema.String,
+  message: Schema.optionalKey(Schema.String),
+  icon: Schema.optionalKey(Schema.String),
+  buttons: Schema.optionalKey(Schema.Array(Schema.String)),
+  default: Schema.optionalKey(Schema.String),
+  number: Schema.optionalKey(Schema.String),
+  initial: Schema.optionalKey(Schema.String),
+  secret: Schema.optionalKey(Schema.Boolean),
+  min: Schema.optionalKey(Schema.NullOr(Schema.Number)),
+  max: Schema.optionalKey(Schema.NullOr(Schema.Number)),
+  files: Schema.optionalKey(Schema.Array(Schema.String)),
+  filetypes: Schema.optionalKey(Schema.Array(Schema.Tuple([Schema.String, Schema.String]))),
+  extension: Schema.optionalKey(Schema.String),
+  multiple: Schema.optionalKey(Schema.Boolean)
+})
+export type TkAsk = typeof TkAsk.Type
+
 const decodeSceneJson = Schema.decodeUnknownOption(Schema.fromJsonString(TkScene))
 const decodeDialogJson = Schema.decodeUnknownOption(Schema.fromJsonString(TkDialog))
+const decodeImageJson = Schema.decodeUnknownOption(Schema.fromJsonString(TkImage))
+const decodeAskJson = Schema.decodeUnknownOption(Schema.fromJsonString(TkAsk))
+
+export const decodeImage = (json: string): Option.Option<TkImage> => decodeImageJson(json)
+export const decodeAsk = (json: string): Option.Option<TkAsk> => decodeAskJson(json)
 
 export type SceneUpdate =
   | { readonly _tag: "Scene"; readonly scene: TkScene }

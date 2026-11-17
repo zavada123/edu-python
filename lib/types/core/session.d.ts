@@ -5,8 +5,8 @@
  */
 import { Option } from "effect";
 import { type ProgramError } from "./errors.ts";
-import { type TkDialog, type TkScene } from "./tk-scene.ts";
-import { type Chunk, type TkBox, type TkInput, type TurtleOp, type WorkerMessage, type WorkerRequest } from "../engine/protocol.ts";
+import { type TkAsk, type TkDialog, type TkImage, type TkScene } from "./tk-scene.ts";
+import { type Chunk, type ProgramFile, type TkBox, type TkInput, type TurtleOp, type WorkerMessage, type WorkerRequest } from "../engine/protocol.ts";
 export declare const StopReasons: {
     readonly User: "user";
     readonly TimeLimit: "time-limit";
@@ -28,6 +28,11 @@ export type RunStatus = {
 /** The windows of a tkinter program wait for user actions. */
  | {
     readonly _tag: "Window";
+}
+/** A dialog of tkinter (askyesno, askopenfilename…) waits for the answer of the student. */
+ | {
+    readonly _tag: "Asking";
+    readonly ask: TkAsk;
 } | {
     readonly _tag: "Finished";
 } | {
@@ -45,6 +50,10 @@ export interface RunView {
     readonly scene: Option.Option<TkScene>;
     /** Message windows that wait for "OK": the first one is shown. */
     readonly dialogs: ReadonlyArray<TkDialog>;
+    /** Pictures of `PhotoImage` by number. */
+    readonly images: ReadonlyMap<number, TkImage>;
+    /** Files that the program saved: the student can download them. One file for each name, the last one. */
+    readonly downloads: ReadonlyArray<ProgramFile>;
 }
 export declare const idleView: RunView;
 /** The worker as the session sees it: `worker.ts` in the browser, a fake in tests. */
@@ -60,6 +69,13 @@ export interface RunSession {
     readonly send: (input: TkInput, layout: ReadonlyArray<TkBox>) => void;
     /** The student clicked "OK" in the first message window. */
     readonly closeDialog: () => void;
+    /**
+     * The answer to the dialog of `Asking` (JSON value; null when the student closed it). `files`: files that
+     * the student gave to the program in an "Open" dialog.
+     */
+    readonly answer: (value: unknown, files?: ReadonlyArray<ProgramFile>) => void;
+    /** The student downloaded or closed the offer of a saved file. */
+    readonly dismissDownload: (name: string) => void;
     readonly stop: () => void;
     /** The page closes the runner: the worker is stopped, its messages are not used. */
     readonly dispose: () => void;

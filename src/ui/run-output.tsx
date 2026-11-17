@@ -29,6 +29,7 @@ export const statusLine = (status: RunStatus): string =>
     Running: () => "Програма працює…",
     WaitingInput: () => "Програма чекає, поки ти введеш значення.",
     Window: () => "Вікно програми відкрите: клацай, вводь текст, натискай клавіші.",
+    Asking: () => "Програма чекає на твою відповідь у діалоговому вікні.",
     Finished: () => "Програма завершила роботу.",
     Failed: () => "У програмі помилка.",
     Stopped: () => ""
@@ -202,7 +203,7 @@ export function usePythonRun(worker: WorkerFactory): PythonRun {
 
 /** "Stop" works while the program runs, waits for a value or shows a window. */
 export const canStop = (status: RunStatus): boolean =>
-  isBusy(status) || status._tag === "WaitingInput" || status._tag === "Window"
+  isBusy(status) || status._tag === "WaitingInput" || status._tag === "Window" || status._tag === "Asking"
 
 /** The error line for the editor: only after a failed run. */
 export const errorLineOf = (status: RunStatus): Option.Option<number> =>

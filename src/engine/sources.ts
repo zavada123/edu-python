@@ -17,6 +17,14 @@ import tkConstants from "./py/tkinter/constants.py?raw"
 import tkMessagebox from "./py/tkinter/messagebox.py?raw"
 import tkThemed from "./py/tkinter/ttk.py?raw"
 import turtle from "./py/turtle.py?raw"
+import tkText from "./py/tkinter/_text.py?raw"
+import tkLists from "./py/tkinter/_lists.py?raw"
+import tkMenus from "./py/tkinter/_menus.py?raw"
+import tkImages from "./py/tkinter/_images.py?raw"
+import tkFiledialog from "./py/tkinter/filedialog.py?raw"
+import tkSimpledialog from "./py/tkinter/simpledialog.py?raw"
+import tkColorchooser from "./py/tkinter/colorchooser.py?raw"
+import tkScrolledtext from "./py/tkinter/scrolledtext.py?raw"
 import { type Engine, type EngineSources, loadEngine } from "./engine.ts"
 import { type Library, LibraryFiles } from "./library.ts"
 
@@ -34,7 +42,15 @@ export const pythonLibrary: Library = {
   [LibraryFiles.TkVariables]: tkVariables,
   [LibraryFiles.TkFields]: tkFields,
   [LibraryFiles.TkWidgets]: tkWidgets,
-  [LibraryFiles.TkWindows]: tkWindows
+  [LibraryFiles.TkWindows]: tkWindows,
+  [LibraryFiles.TkText]: tkText,
+  [LibraryFiles.TkLists]: tkLists,
+  [LibraryFiles.TkMenus]: tkMenus,
+  [LibraryFiles.TkImages]: tkImages,
+  [LibraryFiles.TkFiledialog]: tkFiledialog,
+  [LibraryFiles.TkSimpledialog]: tkSimpledialog,
+  [LibraryFiles.TkColorchooser]: tkColorchooser,
+  [LibraryFiles.TkScrolledtext]: tkScrolledtext
 }
 
 export const pythonPrelude: string = prelude

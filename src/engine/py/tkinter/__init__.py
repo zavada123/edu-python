@@ -8,26 +8,12 @@ from tkinter._events import Event
 from tkinter._core import Misc, mainloop
 from tkinter._windows import Tk, Toplevel, Wm
 from tkinter._vars import BooleanVar, DoubleVar, IntVar, StringVar, Variable
-from tkinter._fields import Entry, Scale, Text
-from tkinter._widgets import (
-    BitmapImage,
-    Button,
-    Checkbutton,
-    Frame,
-    Label,
-    LabelFrame,
-    Listbox,
-    Menu,
-    Menubutton,
-    Message,
-    OptionMenu,
-    PanedWindow,
-    PhotoImage,
-    Radiobutton,
-    Scrollbar,
-    Spinbox,
-    Widget,
-)
+from tkinter._fields import Entry, Scale
+from tkinter._text import Text
+from tkinter._widgets import Button, Checkbutton, Frame, Label, LabelFrame, Message, PanedWindow, Radiobutton, Widget
+from tkinter._lists import Listbox, Scrollbar, Spinbox
+from tkinter._menus import Menu, Menubutton, OptionMenu
+from tkinter._images import BitmapImage, Image, PhotoImage
 from tkinter._canvas import Canvas
 from tkinter import _core, _page
 
@@ -37,6 +23,8 @@ TclVersion = 8.6
 # For prelude.py.
 _app = _core.app
 _MainLoop = _core._MainLoop
+_Ask = _core._Ask
+_send_files = _core.send_files
 _dispatch = _page.dispatch
 
 
@@ -59,8 +47,8 @@ def getboolean(s):
 
 
 def image_names():
-    return ()
+    return tuple(image.name for image in _core.app.images.values())
 
 
 def image_types():
-    return ()
+    return ("photo",)

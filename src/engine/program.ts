@@ -37,6 +37,8 @@ export const runProgram = (engine: Engine, code: string, input: string, onOverfl
     // A window program (tkinter) is at `mainloop()`: a test sees what it printed before the window.
     case "Waiting":
       return { _tag: "Finished", output: text }
+    // A dialog (askyesno, askopenfilename…) waits for an answer that a test cannot give.
+    case "Asking":
     case "NeedInput":
       return { _tag: "NeedsInput", output: text }
     case "Failed":

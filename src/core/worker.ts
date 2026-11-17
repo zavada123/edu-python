@@ -10,7 +10,7 @@
  *     startPythonWorker(wasmUrl)
  */
 import { type Engine, type EngineSink, loadEngine, type RunResult } from "../engine/engine.ts"
-import { appendChunk, type Chunk, type EventRequest, type TurtleOp, type WorkerMessage, type WorkerRequest } from "../engine/protocol.ts"
+import { appendChunk, type Chunk, type EventRequest, type ProgramFile, type TurtleOp, type WorkerMessage, type WorkerRequest } from "../engine/protocol.ts"
 import { engineSources } from "../engine/sources.ts"
 import { stopCodeGeneration } from "../engine/wall.ts"
 
@@ -29,6 +29,28 @@ const timers = new Map<number, ReturnType<typeof setTimeout>>()
 const clearTimers = (): void => {
   for (const timer of timers.values()) clearTimeout(timer)
   timers.clear()
+  held = []
+}
+
+/**
+ * A dialog of a handler waits for the student: timers that come now wait too. The page sends the action
+ * again with the answer, then the held timers run.
+ */
+let asking = false
+let held: Array<number> = []
+
+const fireTimer = (ready: Engine, id: number): void => {
+  if (asking) {
+    held.push(id)
+    return
+  }
+  handle(ready, { _tag: "Event", input: { _tag: "Timer", timer: id }, layout: [] })
+}
+
+const releaseTimers = (ready: Engine): void => {
+  const waiting = held
+  held = []
+  for (const id of waiting) fireTimer(ready, id)
 }
 
 /** An error of the engine itself (not of the program) is shown as a program error. */
@@ -41,19 +63,23 @@ const runSafely = (call: (sink: EngineSink) => RunResult, sink: EngineSink): Run
 }
 
 /** Runs the program or one of its handlers, sends its output while it works, then the result. */
-const execute = (ready: Engine, start: WorkerMessage, call: (sink: EngineSink) => RunResult): void => {
+const execute = (ready: Engine, start: WorkerMessage, call: (sink: EngineSink) => RunResult, event: EventRequest | null): void => {
   let chunks: Array<Chunk> = []
   let ops: Array<TurtleOp> = []
   let scenes: Array<string> = []
   let dialogs: Array<string> = []
+  let images: Array<string> = []
+  let downloads: Array<ProgramFile> = []
   let lastPost = performance.now()
   const send = (): void => {
-    if (chunks.length === 0 && ops.length === 0 && scenes.length === 0 && dialogs.length === 0) return
-    post({ _tag: "Progress", chunks, ops, scenes, dialogs })
+    if (chunks.length === 0 && ops.length === 0 && scenes.length === 0 && dialogs.length === 0 && images.length === 0 && downloads.length === 0) return
+    post({ _tag: "Progress", chunks, ops, scenes, dialogs, images, downloads })
     chunks = []
     ops = []
     scenes = []
     dialogs = []
+    images = []
+    downloads = []
     lastPost = performance.now()
   }
   const sendSoon = (): void => {
@@ -81,12 +107,20 @@ const execute = (ready: Engine, start: WorkerMessage, call: (sink: EngineSink) =
     timer: (id, ms) => {
       timers.set(id, setTimeout(() => {
         timers.delete(id)
-        handle(ready, { _tag: "Event", input: { _tag: "Timer", timer: id }, layout: [] })
+        fireTimer(ready, id)
       }, ms))
     },
     cancelTimer: (id) => {
       clearTimeout(timers.get(id))
       timers.delete(id)
+    },
+    image: (json) => {
+      images.push(json)
+      sendSoon()
+    },
+    download: (file) => {
+      downloads.push(file)
+      sendSoon()
     },
     overflow: () => {
       send()
@@ -94,13 +128,14 @@ const execute = (ready: Engine, start: WorkerMessage, call: (sink: EngineSink) =
     }
   })
   send()
-  post(result)
-  // Timers work only while the windows wait for the user.
-  if (result._tag !== "Waiting") clearTimers()
+  asking = result._tag === "Asking"
+  post(result._tag === "Asking" ? { ...result, event } : result)
+  // Timers work only while the windows wait for the user (also while a dialog of a handler waits).
+  if (result._tag !== "Waiting" && result._tag !== "Asking") clearTimers()
 }
 
 const handle = (ready: Engine, request: EventRequest): void => {
-  execute(ready, { _tag: "Handling" }, (sink) => ready.event(request, sink))
+  execute(ready, { _tag: "Handling" }, (sink) => ready.event(request, sink), request)
 }
 
 /** Starts the worker: call it once at the top of the worker file of the page. */
@@ -115,9 +150,12 @@ export const startPythonWorker = (wasmUrl: string): void => {
       switch (request._tag) {
         case "Run":
           clearTimers()
-          return execute(ready, { _tag: "Started" }, (sink) => ready.run(request, sink))
+          asking = false
+          return execute(ready, { _tag: "Started" }, (sink) => ready.run(request, sink), null)
         case "Event":
-          return handle(ready, request)
+          asking = false
+          handle(ready, request)
+          return releaseTimers(ready)
       }
     },
     (error: unknown) => {

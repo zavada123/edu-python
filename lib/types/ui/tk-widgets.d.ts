@@ -1,9 +1,5 @@
 import { type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { type TkScene, type TkWidget } from "../core/tk-scene.ts";
-export declare const border: (relief: string, width: number) => CSSProperties;
-/** CSS alignment of a Tk anchor: n, ne, e, se, s, sw, w, nw, center. */
-export declare const anchorX: (anchor: string) => string;
-export declare const anchorY: (anchor: string) => string;
 export declare const containerSize: (scene: TkScene, id: number, propagate: boolean, width: number, height: number) => CSSProperties;
 type ViewProps = Readonly<{
     widget: TkWidget;

@@ -5,34 +5,15 @@ import { managedChildren, type TkManager, TkManagerKinds, type TkScene, type TkW
 import { useTk } from "./tk-context.ts"
 import { useWidgetEvents } from "./tk-events.ts"
 import { TkCanvasView } from "./tk-canvas.tsx"
+import { anchorX, anchorY, border, fieldStyle, textBox, useFieldText } from "./tk-field.ts"
+import { TextView } from "./tk-text.tsx"
+import { TkPicture } from "./tk-image.tsx"
+import { ComboboxView, ListboxView, ScrollbarView, SpinboxView } from "./tk-lists.tsx"
+import { MenubuttonView } from "./tk-menus.tsx"
 
 // Widgets of a tkinter window and the geometry managers. Sizes follow Tk: `width` of a Label or a Button is
 // in characters (CSS `ch` is the width of "0", as in Tk), `height` is in lines; padx, pady and the border
 // are added outside of it (content-box).
-
-/** Line height of Tk fonts; the fonts of `_style.py` have the same `/1.2`. */
-const LineHeight = 1.2
-const Light = "var(--tk-paper)"
-const Shadow = "var(--tk-shadow)"
-
-export const border = (relief: string, width: number): CSSProperties => {
-  if (width <= 0) return { borderWidth: 0, borderStyle: "none" }
-  const raised = { borderWidth: width, borderStyle: "solid", borderColor: `${Light} ${Shadow} ${Shadow} ${Light}` }
-  return Match.value(relief).pipe(
-    Match.when("raised", () => raised),
-    Match.when("sunken", () => ({ ...raised, borderColor: `${Shadow} ${Light} ${Light} ${Shadow}` })),
-    Match.when("groove", () => ({ borderWidth: width, borderStyle: "groove", borderColor: Shadow })),
-    Match.when("ridge", () => ({ borderWidth: width, borderStyle: "ridge", borderColor: Shadow })),
-    Match.when("solid", () => ({ borderWidth: width, borderStyle: "solid", borderColor: "var(--tk-text)" })),
-    Match.orElse(() => ({ borderWidth: width, borderStyle: "solid", borderColor: "transparent" }))
-  )
-}
-
-/** CSS alignment of a Tk anchor: n, ne, e, se, s, sw, w, nw, center. */
-export const anchorX = (anchor: string): string =>
-  anchor === "center" ? "center" : anchor.includes("w") ? "flex-start" : anchor.includes("e") ? "flex-end" : "center"
-export const anchorY = (anchor: string): string =>
-  anchor === "center" ? "center" : anchor.startsWith("n") ? "flex-start" : anchor.startsWith("s") ? "flex-end" : "center"
 
 /** Does the container take the size of its widgets (pack and grid do it, place does not)? */
 const fitsContent = (scene: TkScene, id: number, propagate: boolean): boolean =>
@@ -41,28 +22,29 @@ const fitsContent = (scene: TkScene, id: number, propagate: boolean): boolean =>
 export const containerSize = (scene: TkScene, id: number, propagate: boolean, width: number, height: number): CSSProperties =>
   fitsContent(scene, id, propagate) ? {} : { width: Math.max(1, width), height: Math.max(1, height) }
 
-const textBox = (w: TkWidget): CSSProperties => ({
-  boxSizing: "content-box",
-  font: w.font,
-  color: w.fg,
-  background: w.bg === "" ? "transparent" : w.bg,
-  ...border(w.relief, w.bd),
-  padding: `${w.pady}px ${w.padx}px`,
-  margin: w.highlight,
-  width: w.width > 0 ? `${w.width}ch` : undefined,
-  height: w.height > 0 ? `${w.height * LineHeight}em` : undefined,
-  display: "flex",
-  justifyContent: anchorX(w.anchor),
-  alignItems: anchorY(w.anchor),
-  textAlign: w.justify === "left" ? "left" : w.justify === "right" ? "right" : "center",
-  whiteSpace: w.wrap > 0 ? "pre-wrap" : "pre",
-  overflow: "hidden",
-  textDecoration: w.underline ? "underline" : undefined,
-  userSelect: "none"
-})
+const compoundDirection = (compound: string): CSSProperties["flexDirection"] =>
+  compound === "bottom" ? "column-reverse" : compound === "left" ? "row" : compound === "right" ? "row-reverse" : "column"
 
+/** The text of a Label or a Button, and its picture (`image`, `compound`), as Tk shows them. */
 function Caption(props: Readonly<{ widget: TkWidget }>) {
-  return <span style={{ maxWidth: props.widget.wrap > 0 ? props.widget.wrap : undefined, overflowWrap: "anywhere" }}>{props.widget.text}</span>
+  const w = props.widget
+  const text = <span style={{ maxWidth: w.wrap > 0 ? w.wrap : undefined, overflowWrap: "anywhere" }}>{w.text}</span>
+  if (w.image === 0) return text
+  if (w.compound === "none" || w.compound === "") return <TkPicture id={w.image} />
+  if (w.compound === "center") {
+    return (
+      <span style={{ display: "grid", placeItems: "center" }}>
+        <span style={{ gridArea: "1 / 1" }}><TkPicture id={w.image} /></span>
+        <span style={{ gridArea: "1 / 1" }}>{text}</span>
+      </span>
+    )
+  }
+  return (
+    <span style={{ display: "flex", flexDirection: compoundDirection(w.compound), alignItems: "center", gap: 2 }}>
+      <TkPicture id={w.image} />
+      {text}
+    </span>
+  )
 }
 
 type ViewProps = Readonly<{ widget: TkWidget; layout: CSSProperties }>
@@ -155,29 +137,6 @@ function ChoiceView(props: ViewProps & Readonly<{ round: boolean }>) {
   )
 }
 
-/** Text of a field: the student types it, and the program changes it (`rev`). */
-const useFieldText = (w: TkWidget): readonly [string, (value: string) => void] => {
-  const [value, setValue] = useState(w.text)
-  const [rev, setRev] = useState(w.rev)
-  if (rev !== w.rev) {
-    setRev(w.rev)
-    setValue(w.text)
-  }
-  return [value, setValue]
-}
-
-const fieldStyle = (w: TkWidget): CSSProperties => ({
-  boxSizing: "content-box",
-  font: w.font,
-  color: w.fg,
-  background: w.bg,
-  ...border(w.relief, w.bd),
-  margin: w.highlight,
-  padding: "1px 2px",
-  outline: "none",
-  textAlign: w.justify === "right" ? "right" : w.justify === "center" ? "center" : "left"
-})
-
 function EntryView(props: ViewProps) {
   const tk = useTk()
   const events = useWidgetEvents(props.widget.id)
@@ -200,37 +159,6 @@ function EntryView(props: ViewProps) {
         tk.send({ _tag: "Edit", widget: w.id, text: e.target.value })
       }}
       style={{ ...fieldStyle(w), width: `${Math.max(1, w.width)}ch`, ...props.layout }}
-    />
-  )
-}
-
-function TextView(props: ViewProps) {
-  const tk = useTk()
-  const events = useWidgetEvents(props.widget.id)
-  const w = props.widget
-  const [value, setValue] = useFieldText(w)
-  return (
-    <textarea
-      {...{ [TkIdAttribute]: w.id }}
-      {...events}
-      aria-label="Текстове поле програми"
-      value={value}
-      readOnly={w.state === "disabled" || !tk.active}
-      spellCheck={false}
-      onChange={(e) => {
-        setValue(e.target.value)
-        tk.send({ _tag: "Edit", widget: w.id, text: e.target.value })
-      }}
-      style={{
-        ...fieldStyle(w),
-        padding: `${w.pady}px ${w.padx}px`,
-        width: `${Math.max(1, w.width)}ch`,
-        height: `${Math.max(1, w.height) * LineHeight}em`,
-        resize: "none",
-        whiteSpace: w.textwrap === "none" ? "pre" : "pre-wrap",
-        wordBreak: w.textwrap === "char" ? "break-all" : "normal",
-        ...props.layout
-      }}
     />
   )
 }
@@ -316,6 +244,13 @@ export function TkWidgetView(props: ViewProps): ReactNode {
     Match.when(TkWidgetKinds.LabelFrame, () => <FrameView {...props} />),
     Match.when(TkWidgetKinds.Canvas, () => <TkCanvasView {...props} />),
     Match.when(TkWidgetKinds.Scale, () => <ScaleView {...props} />),
+    Match.when(TkWidgetKinds.Listbox, () => <ListboxView {...props} />),
+    Match.when(TkWidgetKinds.Spinbox, () => <SpinboxView {...props} />),
+    Match.when(TkWidgetKinds.Combobox, () => <ComboboxView {...props} />),
+    Match.when(TkWidgetKinds.Scrollbar, () => <ScrollbarView {...props} />),
+    Match.when(TkWidgetKinds.Menubutton, () => <MenubuttonView {...props} />),
+    // A Menu is not in the window: the menu bar and the drop-down lists show it (tk-menus.tsx).
+    Match.when(TkWidgetKinds.Menu, () => null),
     Match.exhaustive
   )
 }

@@ -4,7 +4,10 @@ import { type CSSProperties, type KeyboardEvent, type ReactNode, useCallback, us
 import { cn } from "./kit.tsx"
 import { KeyKinds, type TkBox, type TkInput } from "../engine/protocol.ts"
 import { collectLayout, keyChar, keyCode, keysym, modifiers, TkIdAttribute } from "../core/tk-input.ts"
-import { TkBindKinds, type TkDialog, type TkDialogIcon, TkDialogIcons, type TkScene, type TkWindow, waitsFor } from "../core/tk-scene.ts"
+import { type TkAsk, TkBindKinds, type TkDialog, type TkDialogIcon, TkDialogIcons, type TkImage, type TkScene, type TkWindow, waitsFor } from "../core/tk-scene.ts"
+import type { ProgramFile } from "../engine/protocol.ts"
+import { type Answer, AskDialog, Downloads } from "./tk-dialogs.tsx"
+import { MenuBar, PopupMenus } from "./tk-menus.tsx"
 import { PressTracker, TkContext, type TkContextValue, TkWindowAttribute, TkWindowContext, useTk } from "./tk-context.ts"
 import { useWidgetEvents } from "./tk-events.ts"
 import { Children, containerSize, keyTarget } from "./tk-widgets.tsx"
@@ -91,6 +94,7 @@ function WindowFrame(props: Readonly<{ window: TkWindow }>) {
                 </button>
               </div>
             )}
+            {w.menu !== 0 && <MenuBar menu={w.menu} />}
             <ClientArea window={w} />
           </div>
         </div>
@@ -149,6 +153,14 @@ export interface TkWindowsProps {
   readonly active: boolean
   readonly onInput: (input: TkInput, layout: ReadonlyArray<TkBox>) => void
   readonly onCloseDialog: () => void
+  /** Pictures of `PhotoImage` by number. */
+  readonly images: ReadonlyMap<number, TkImage>
+  /** A dialog that waits for the answer of the student (askyesno, askopenfilename…). */
+  readonly ask: Option.Option<TkAsk>
+  readonly onAnswer: Answer
+  /** Files that the program saved: the student can download them. */
+  readonly downloads: ReadonlyArray<ProgramFile>
+  readonly onDismissDownload: (name: string) => void
 }
 
 /** The windows of the program and its message windows. The parent gives a new `key` for each run. */
@@ -184,13 +196,15 @@ export function TkWindows(props: TkWindowsProps) {
     Option.map(props.scene, (scene) => {
       if (scene.focusRev === focusRev.current) return
       focusRev.current = scene.focusRev
-      const field = root?.querySelector(`[${TkIdAttribute}="${scene.focus}"]`)
+      const widget = root?.querySelector(`[${TkIdAttribute}="${scene.focus}"]`)
+      // A Text or a Spinbox has its field inside.
+      const field = widget instanceof HTMLInputElement || widget instanceof HTMLTextAreaElement ? widget : widget?.querySelector("input, textarea")
       if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement) field.focus({ preventScroll: true })
     })
   }, [props.scene, root])
 
   const dialog = props.dialogs[0]
-  if (Option.isNone(props.scene) && dialog === undefined) return null
+  if (Option.isNone(props.scene) && dialog === undefined && Option.isNone(props.ask) && props.downloads.length === 0) return null
 
   return (
     <section ref={setRoot} className="epy-tk-area" aria-label="Вікна програми">
@@ -198,17 +212,23 @@ export function TkWindows(props: TkWindowsProps) {
       {Option.match(props.scene, {
         onNone: () => null,
         onSome: (scene) => {
-          const value: TkContextValue = { scene, active: props.active, send, press }
+          const value: TkContextValue = { scene, images: props.images, active: props.active, send, press }
           return (
             <TkContext.Provider value={Option.some(value)}>
               <div className={cn("epy-tk-windows", !props.active && "epy-tk-windows--idle")}>
                 {visible.map((w) => <WindowFrame key={w.id} window={w} />)}
               </div>
+              {props.active && <PopupMenus root={root} />}
             </TkContext.Provider>
           )
         }
       })}
+      <Downloads files={props.downloads} onDismiss={props.onDismissDownload} />
       {dialog !== undefined && <MessageDialog dialog={dialog} onClose={props.onCloseDialog} />}
+      {dialog === undefined && Option.match(props.ask, {
+        onNone: () => null,
+        onSome: (ask) => <AskDialog key={JSON.stringify(ask)} ask={ask} onAnswer={props.onAnswer} />
+      })}
     </section>
   )
 }

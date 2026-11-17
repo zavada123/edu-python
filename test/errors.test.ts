@@ -52,7 +52,7 @@ const cases: ReadonlyArray<readonly [name: string, code: string, line: number, e
   ["unknown widget option", 'from tkinter import *\nw = Tk()\nLabel(w, txt="a")', 3, "немає параметра `txt`"],
   ["pack and grid in one window", 'from tkinter import *\nw = Tk()\nLabel(w).pack()\nLabel(w).grid()', 4, "не можна змішувати"],
   ["event without angle brackets", 'from tkinter import *\nw = Tk()\nw.bind("Button-1", print)', 3, "кутових дужках"],
-  ["dialog that the site does not have", "from tkinter import messagebox\nmessagebox.askyesno('a', 'b')", 2, "Запусти програму в IDLE"],
+  ["dialog that the site does not have", "from tkinter import ttk\nttk.Treeview()", 2, "Запусти програму в IDLE"],
   ["bind handler without event", "from tkinter import *\nw = Tk()\ndef click():\n    pass\nw.bind('<Button-1>', click)\nw.event_generate('<Button-1>')", 6, "`def click(event):`"]
 ]
 

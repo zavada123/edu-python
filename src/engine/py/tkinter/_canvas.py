@@ -16,7 +16,9 @@ _ARC = dict(_SHAPE)
 _ARC.update({"start": 0, "extent": 90, "style": "pieslice"})
 _TEXT = {"state": "", "tags": (), "text": "", "fill": "black", "activefill": "", "disabledfill": "", "font": "TkDefaultFont", "anchor": "center", "justify": "left", "width": 0, "angle": 0, "stipple": "", "activestipple": "", "disabledstipple": "", "offset": "", "underline": -1}
 
-_SPECS = {"line": _LINE, "rectangle": _SHAPE, "oval": _SHAPE, "polygon": _POLYGON, "arc": _ARC, "text": _TEXT}
+_IMAGE = {"state": "", "tags": (), "image": "", "activeimage": "", "disabledimage": "", "anchor": "center"}
+
+_SPECS = {"image": _IMAGE, "line": _LINE, "rectangle": _SHAPE, "oval": _SHAPE, "polygon": _POLYGON, "arc": _ARC, "text": _TEXT}
 _COLOR_KEYS = ("fill", "outline", "activefill", "activeoutline", "disabledfill", "disabledoutline")
 
 _DASHES = {"-": [6, 4], ".": [2, 4], "-.": [6, 4, 2, 4], "-..": [6, 4, 2, 4, 2, 4], ",": [4, 4], "_": [8, 4]}
@@ -34,7 +36,7 @@ def _flat(args):
 
 def _count(kind, coords):
     n = len(coords)
-    if kind == "text":
+    if kind in ("text", "image"):
         if n != 2:
             raise TclError("wrong # coordinates: expected 2, got %d" % n)
     elif kind in ("rectangle", "oval", "arc"):
@@ -88,6 +90,10 @@ def _check(kind, name, value):
         _style.one_of("cap style", value, ("butt", "projecting", "round"))
     elif name == "joinstyle":
         _style.one_of("join style", value, ("bevel", "miter", "round"))
+    elif name in ("image", "activeimage", "disabledimage"):
+        from tkinter._images import image_of
+
+        image_of(value)
     elif name == "state":
         if value != "":
             _style.one_of("state", value, ("disabled", "hidden", "normal"))
@@ -105,6 +111,17 @@ class _Item:
 def _bbox(item):
     xs = item.coords[0::2]
     ys = item.coords[1::2]
+    if item.kind == "image":
+        from tkinter._images import image_of
+        from tkinter._core import app
+
+        image = app.images.get(image_of(item.opts["image"]))
+        width = image.width() if image is not None else 0
+        height = image.height() if image is not None else 0
+        anchor = str(item.opts["anchor"])
+        x = xs[0] - (0 if "w" in anchor else width if "e" in anchor else width / 2)
+        y = ys[0] - (0 if "n" in anchor else height if "s" in anchor else height / 2)
+        return (int(x), int(y), int(x + width), int(y + height))
     if item.kind == "text":
         css, _ = _style.font(item.opts["font"])
         size = int(css.split("px")[0].split()[-1])
@@ -213,7 +230,7 @@ class Canvas(Widget):
         return self._create("text", args, kw)
 
     def create_image(self, *args, **kw):
-        raise NotImplementedError("create_image isn't available in the browser yet: run the program in IDLE")
+        return self._create("image", args, kw)
 
     def create_bitmap(self, *args, **kw):
         raise NotImplementedError("create_bitmap isn't available in the browser yet: run the program in IDLE")
@@ -481,4 +498,13 @@ class Canvas(Widget):
             "wrap": _style.number(opts.get("width", 0)) if item.kind == "text" else 0,
             "angle": _style.number(opts.get("angle", 0)),
             "hidden": str(opts.get("state", "")) == "hidden",
+            "image": self._item_image(opts),
         }
+
+    def _item_image(self, opts):
+        from tkinter._images import image_of
+
+        try:
+            return image_of(opts.get("image", ""))
+        except TclError:
+            return 0

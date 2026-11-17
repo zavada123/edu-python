@@ -17,7 +17,15 @@ export const LibraryFiles = {
   TkStyle: "tkinter/_style.py",
   TkVariables: "tkinter/_vars.py",
   TkWidgets: "tkinter/_widgets.py",
-  TkWindows: "tkinter/_windows.py"
+  TkWindows: "tkinter/_windows.py",
+  TkText: "tkinter/_text.py",
+  TkLists: "tkinter/_lists.py",
+  TkMenus: "tkinter/_menus.py",
+  TkImages: "tkinter/_images.py",
+  TkFiledialog: "tkinter/filedialog.py",
+  TkSimpledialog: "tkinter/simpledialog.py",
+  TkColorchooser: "tkinter/colorchooser.py",
+  TkScrolledtext: "tkinter/scrolledtext.py"
 } as const
 export type LibraryFile = (typeof LibraryFiles)[keyof typeof LibraryFiles]
 
@@ -39,5 +47,13 @@ export const readLibrary = (text: (path: LibraryFile) => string): Library => ({
   [LibraryFiles.TkStyle]: text(LibraryFiles.TkStyle),
   [LibraryFiles.TkVariables]: text(LibraryFiles.TkVariables),
   [LibraryFiles.TkWidgets]: text(LibraryFiles.TkWidgets),
-  [LibraryFiles.TkWindows]: text(LibraryFiles.TkWindows)
+  [LibraryFiles.TkWindows]: text(LibraryFiles.TkWindows),
+  [LibraryFiles.TkText]: text(LibraryFiles.TkText),
+  [LibraryFiles.TkLists]: text(LibraryFiles.TkLists),
+  [LibraryFiles.TkMenus]: text(LibraryFiles.TkMenus),
+  [LibraryFiles.TkImages]: text(LibraryFiles.TkImages),
+  [LibraryFiles.TkFiledialog]: text(LibraryFiles.TkFiledialog),
+  [LibraryFiles.TkSimpledialog]: text(LibraryFiles.TkSimpledialog),
+  [LibraryFiles.TkColorchooser]: text(LibraryFiles.TkColorchooser),
+  [LibraryFiles.TkScrolledtext]: text(LibraryFiles.TkScrolledtext)
 })

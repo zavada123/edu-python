@@ -18,6 +18,14 @@ export declare const LibraryFiles: {
     readonly TkVariables: "tkinter/_vars.py";
     readonly TkWidgets: "tkinter/_widgets.py";
     readonly TkWindows: "tkinter/_windows.py";
+    readonly TkText: "tkinter/_text.py";
+    readonly TkLists: "tkinter/_lists.py";
+    readonly TkMenus: "tkinter/_menus.py";
+    readonly TkImages: "tkinter/_images.py";
+    readonly TkFiledialog: "tkinter/filedialog.py";
+    readonly TkSimpledialog: "tkinter/simpledialog.py";
+    readonly TkColorchooser: "tkinter/colorchooser.py";
+    readonly TkScrolledtext: "tkinter/scrolledtext.py";
 };
 export type LibraryFile = (typeof LibraryFiles)[keyof typeof LibraryFiles];
 /** The text of each module. */

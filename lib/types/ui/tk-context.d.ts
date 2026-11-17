@@ -1,9 +1,11 @@
 import { Option } from "effect";
 import type { TkInput } from "../engine/protocol.ts";
 import type { PressMemory } from "../core/tk-input.ts";
-import type { TkScene, TkWindow } from "../core/tk-scene.ts";
+import type { TkImage, TkScene, TkWindow } from "../core/tk-scene.ts";
 export interface TkContextValue {
     readonly scene: TkScene;
+    /** Pictures of `PhotoImage` by number. */
+    readonly images: ReadonlyMap<number, TkImage>;
     /** The program waits for user actions: the window is not frozen. */
     readonly active: boolean;
     readonly send: (input: TkInput) => void;
@@ -17,15 +19,6 @@ export declare class PressTracker {
 export declare const TkContext: import("react").Context<Option.Option<TkContextValue>>;
 export declare const useTk: () => TkContextValue;
 export declare const TkWindowContext: import("react").Context<Option.Option<{
-    readonly title: string;
-    readonly width: number;
-    readonly height: number;
-    readonly minWidth: number;
-    readonly minHeight: number;
-    readonly x: number;
-    readonly y: number;
-    readonly visible: boolean;
-    readonly decorated: boolean;
     readonly id: number;
     readonly binds: readonly string[];
     readonly bg: string;
@@ -37,6 +30,16 @@ export declare const TkWindowContext: import("react").Context<Option.Option<{
     readonly propagate: boolean;
     readonly columns: readonly (readonly [number, number, number])[];
     readonly rows: readonly (readonly [number, number, number])[];
+    readonly title: string;
+    readonly width: number;
+    readonly height: number;
+    readonly minWidth: number;
+    readonly minHeight: number;
+    readonly x: number;
+    readonly y: number;
+    readonly visible: boolean;
+    readonly decorated: boolean;
+    readonly menu: number;
 }>>;
 export declare const useTkWindow: () => TkWindow;
 /** The client area of a window (the element with this attribute): `x_root` and `y_root` count from it. */

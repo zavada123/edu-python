@@ -2,6 +2,7 @@
 # calls the handlers of the program; then the page gets the new state of the windows.
 import json
 
+import _mriya
 from tkinter import _core
 from tkinter._core import app
 from tkinter._events import Event
@@ -56,9 +57,15 @@ def _key(data, widget):
 def _handle(data):
     tag = data["_tag"]
     if tag == "Timer":
-        timer = app.timers.pop(int(data["timer"]), None)
+        number = int(data["timer"])
+        timer = app.timers.get(number)
         if timer is not None:
+            # Removed after the handler: a handler that asks (`_Ask`) runs again with the answer.
             timer[0](*timer[1])
+            app.timers.pop(number, None)
+        return
+    if tag == "Clipboard":
+        app.clipboard = str(data["text"])
         return
     widget = app.by_id.get(int(data["widget"]))
     if widget is None or not widget._alive:
@@ -75,14 +82,26 @@ def _handle(data):
         widget._edit(data["text"])
     elif tag == "Close" and hasattr(widget, "_close_request"):
         widget._close_request()
+    elif tag == "Selection" and hasattr(widget, "_select_text"):
+        widget._select_text(int(data["start"]), int(data["end"]), int(data["caret"]))
+    elif tag == "Pick" and hasattr(widget, "_pick"):
+        widget._pick([int(i) for i in data["items"]])
+    elif tag == "Spin" and hasattr(widget, "_spin"):
+        widget._spin(1 if data["up"] else -1)
+    elif tag == "MenuItem" and hasattr(widget, "_menu_item"):
+        widget._menu_item(int(data["index"]))
 
 
 def dispatch(text):
     data = json.loads(text)
+    _core.new_answers()
     try:
         _layout(data["layout"])
         _handle(data["input"])
     except SystemExit:
         _core.close()
+    except _core._Ask as question:
+        # The page shows the dialog and sends this action again with the answer.
+        _mriya.tk_ask(json.dumps(question.spec))
     finally:
         _core.flush()
