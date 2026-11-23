@@ -18,7 +18,8 @@ _TEXT = {"state": "", "tags": (), "text": "", "fill": "black", "activefill": "",
 
 _IMAGE = {"state": "", "tags": (), "image": "", "activeimage": "", "disabledimage": "", "anchor": "center"}
 
-_SPECS = {"image": _IMAGE, "line": _LINE, "rectangle": _SHAPE, "oval": _SHAPE, "polygon": _POLYGON, "arc": _ARC, "text": _TEXT}
+_WINDOW = {"state": "", "tags": (), "window": "", "anchor": "center", "width": 0, "height": 0}
+_SPECS = {"window": _WINDOW, "image": _IMAGE, "line": _LINE, "rectangle": _SHAPE, "oval": _SHAPE, "polygon": _POLYGON, "arc": _ARC, "text": _TEXT}
 _COLOR_KEYS = ("fill", "outline", "activefill", "activeoutline", "disabledfill", "disabledoutline")
 
 _DASHES = {"-": [6, 4], ".": [2, 4], "-.": [6, 4, 2, 4], "-..": [6, 4, 2, 4, 2, 4], ",": [4, 4], "_": [8, 4]}
@@ -36,7 +37,7 @@ def _flat(args):
 
 def _count(kind, coords):
     n = len(coords)
-    if kind in ("text", "image"):
+    if kind in ("text", "image", "window"):
         if n != 2:
             raise TclError("wrong # coordinates: expected 2, got %d" % n)
     elif kind in ("rectangle", "oval", "arc"):
@@ -78,7 +79,7 @@ def _check(kind, name, value):
         _style.font(value)
     elif name == "dash":
         _dash(value)
-    elif name == "width" or name in ("start", "extent", "angle"):
+    elif name == "width" or name in ("start", "extent", "angle", "height"):
         _style.number(value)
     elif name == "arrow":
         _style.one_of("arrow", value, ("none", "first", "last", "both"))
@@ -236,7 +237,8 @@ class Canvas(Widget):
         raise NotImplementedError("create_bitmap isn't available in the browser yet: run the program in IDLE")
 
     def create_window(self, *args, **kw):
-        raise NotImplementedError("create_window isn't available in the browser yet: run the program in IDLE")
+        """A widget on the canvas (a button, a field) at the point x, y, by its `anchor`."""
+        return self._create("window", args, kw)
 
     # ── find figures ──
 
@@ -480,7 +482,7 @@ class Canvas(Widget):
             "coords": item.coords,
             "fill": _style.color(opts.get("fill", "")),
             "outline": _style.color(opts.get("outline", "")),
-            "width": _style.number(opts.get("width", 1)),
+            "width": _style.number(opts.get("width", 0 if item.kind == "window" else 1)),
             "dash": _dash(opts.get("dash", "")),
             "arrow": str(opts.get("arrow", "none")),
             "arrowshape": [_style.number(v) for v in arrowshape],
@@ -499,7 +501,18 @@ class Canvas(Widget):
             "angle": _style.number(opts.get("angle", 0)),
             "hidden": str(opts.get("state", "")) == "hidden",
             "image": self._item_image(opts),
+            "window": self._item_window(opts) if item.kind == "window" else 0,
+            "height": _style.number(opts.get("height", 0)) if item.kind == "window" else 0,
         }
+
+    def _item_window(self, opts):
+        widget = opts.get("window")
+        if isinstance(widget, str) and widget != "":
+            try:
+                widget = self.nametowidget(widget)
+            except KeyError:
+                return 0
+        return widget._id if getattr(widget, "_alive", False) else 0
 
     def _item_image(self, opts):
         from tkinter._images import image_of

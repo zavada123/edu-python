@@ -25,6 +25,8 @@ import tkFiledialog from "./py/tkinter/filedialog.py?raw"
 import tkSimpledialog from "./py/tkinter/simpledialog.py?raw"
 import tkColorchooser from "./py/tkinter/colorchooser.py?raw"
 import tkScrolledtext from "./py/tkinter/scrolledtext.py?raw"
+import tkThemedWidgets from "./py/tkinter/_themed.py?raw"
+import tkFont from "./py/tkinter/font.py?raw"
 import { type Engine, type EngineSources, loadEngine } from "./engine.ts"
 import { type Library, LibraryFiles } from "./library.ts"
 
@@ -50,7 +52,9 @@ export const pythonLibrary: Library = {
   [LibraryFiles.TkFiledialog]: tkFiledialog,
   [LibraryFiles.TkSimpledialog]: tkSimpledialog,
   [LibraryFiles.TkColorchooser]: tkColorchooser,
-  [LibraryFiles.TkScrolledtext]: tkScrolledtext
+  [LibraryFiles.TkScrolledtext]: tkScrolledtext,
+  [LibraryFiles.TkThemedWidgets]: tkThemedWidgets,
+  [LibraryFiles.TkFont]: tkFont
 }
 
 export const pythonPrelude: string = prelude

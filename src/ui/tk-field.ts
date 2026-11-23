@@ -45,7 +45,8 @@ export const textBox = (w: TkWidget): CSSProperties => ({
   whiteSpace: w.wrap > 0 ? "pre-wrap" : "pre",
   overflow: "hidden",
   textDecoration: w.underline ? "underline" : undefined,
-  userSelect: "none"
+  userSelect: "none",
+  ...(w.cursor === "" ? {} : { cursor: w.cursor })
 })
 
 /** Text of a field: the student types it, and the program changes it (`rev`). */
@@ -68,6 +69,8 @@ export const fieldStyle = (w: TkWidget): CSSProperties => ({
   margin: w.highlight,
   padding: "1px 2px",
   outline: "none",
-  textAlign: w.justify === "right" ? "right" : w.justify === "center" ? "center" : "left"
+  textAlign: w.justify === "right" ? "right" : w.justify === "center" ? "center" : "left",
+  ...(w.caret === "" ? {} : { caretColor: w.caret }),
+  ...(w.cursor === "" ? {} : { cursor: w.cursor })
 })
 

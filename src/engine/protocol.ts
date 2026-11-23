@@ -106,6 +106,8 @@ export type TkInput =
   | { readonly _tag: "Edit"; readonly widget: number; readonly text: string }
   /** The close button of a window. */
   | { readonly _tag: "Close"; readonly widget: number }
+  /** The student dragged a window by its title bar: its new place on the "screen". */
+  | { readonly _tag: "Move"; readonly widget: number; readonly x: number; readonly y: number }
   /** The page shows a window for the first time (`<Map>`, `<Expose>`, `<Configure>`). */
   | { readonly _tag: "Shown"; readonly widget: number }
   /** A timer of `after()` (the worker sends it itself). */
@@ -114,6 +116,10 @@ export type TkInput =
   | { readonly _tag: "Selection"; readonly widget: number; readonly start: number; readonly end: number; readonly caret: number }
   /** The student chose rows of a Listbox or a value of a Combobox: their numbers. */
   | { readonly _tag: "Pick"; readonly widget: number; readonly items: ReadonlyArray<number> }
+  /** The student opened or closed a row of a Treeview: the number of the shown row. */
+  | { readonly _tag: "Toggle"; readonly widget: number; readonly index: number }
+  /** A click on a heading of a Treeview: the number of the shown column. */
+  | { readonly _tag: "Heading"; readonly widget: number; readonly index: number }
   /** An arrow of a Spinbox. */
   | { readonly _tag: "Spin"; readonly widget: number; readonly up: boolean }
   /** A command of a menu: `widget` is the Menu, `index` the number of the entry. */

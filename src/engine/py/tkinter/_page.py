@@ -88,6 +88,12 @@ def _handle(data):
         widget._pick([int(i) for i in data["items"]])
     elif tag == "Spin" and hasattr(widget, "_spin"):
         widget._spin(1 if data["up"] else -1)
+    elif tag == "Toggle" and hasattr(widget, "_toggle"):
+        widget._toggle(int(data["index"]))
+    elif tag == "Heading" and hasattr(widget, "_heading_click"):
+        widget._heading_click(int(data["index"]))
+    elif tag == "Move" and hasattr(widget, "_moved"):
+        widget._moved(int(data["x"]), int(data["y"]))
     elif tag == "MenuItem" and hasattr(widget, "_menu_item"):
         widget._menu_item(int(data["index"]))
 

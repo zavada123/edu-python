@@ -20,7 +20,11 @@ export const TkWidgetKinds = {
   Combobox: "Combobox",
   Scrollbar: "Scrollbar",
   Menu: "Menu",
-  Menubutton: "Menubutton"
+  Menubutton: "Menubutton",
+  Progressbar: "Progressbar",
+  Separator: "Separator",
+  Notebook: "Notebook",
+  Treeview: "Treeview"
 } as const
 export const TkWidgetKind = Schema.Literals(Object.values(TkWidgetKinds))
 export type TkWidgetKind = typeof TkWidgetKind.Type
@@ -36,7 +40,8 @@ export const TkItemTypes = {
   Polygon: "polygon",
   Arc: "arc",
   Text: "text",
-  Image: "image"
+  Image: "image",
+  Window: "window"
 } as const
 export const TkItemType = Schema.Literals(Object.values(TkItemTypes))
 export type TkItemType = typeof TkItemType.Type
@@ -72,6 +77,8 @@ const containerFields = {
   padx: Schema.Number,
   pady: Schema.Number,
   highlight: Schema.Number,
+  /** CSS cursor of the `cursor` option, or "". */
+  cursor: Schema.String,
   propagate: Schema.Boolean,
   columns: Schema.Array(Track),
   rows: Schema.Array(Track)
@@ -87,6 +94,17 @@ export const TkWindow = Schema.Struct({
   minHeight: Schema.Number,
   x: Schema.Number,
   y: Schema.Number,
+  /** The program or the student put the window on a place of the screen (`geometry("+100+50")`). */
+  placed: Schema.Boolean,
+  /** The order of windows: a bigger number is on top (`lift`, `-topmost`). */
+  z: Schema.Number,
+  /** `minsize` and `maxsize`: width, height. */
+  minSize: Pad,
+  maxSize: Pad,
+  /** `attributes("-alpha", …)`: 0…1. */
+  alpha: Schema.Number,
+  /** `state("zoomed")` or `attributes("-fullscreen", True)`: the window takes the whole width. */
+  zoomed: Schema.Boolean,
   visible: Schema.Boolean,
   decorated: Schema.Boolean,
   /** The Menu of the menu bar, or 0. */
@@ -148,7 +166,10 @@ export const TkItem = Schema.Struct({
   angle: Schema.Number,
   hidden: Schema.Boolean,
   /** The PhotoImage of an image figure, or 0. */
-  image: Schema.Number
+  image: Schema.Number,
+  /** The widget of a window figure (`create_window`), or 0; `width`, `height`: its size, 0 is its own size. */
+  window: Schema.Number,
+  height: Schema.Number
 })
 export type TkItem = typeof TkItem.Type
 
@@ -216,6 +237,40 @@ export const TkMenu = Schema.Struct({
 })
 export type TkMenu = typeof TkMenu.Type
 
+/** A Progressbar of ttk: `value` of `maximum`; an "indeterminate" bar that `running` moves by itself. */
+export const TkProgress = Schema.Struct({
+  value: Schema.Number,
+  maximum: Schema.Number,
+  mode: Schema.String,
+  running: Schema.Boolean,
+  length: Schema.Number,
+  /** Colours of the bar and of the trough from `ttk.Style`, or "". */
+  bar: Schema.String,
+  trough: Schema.String
+})
+export type TkProgress = typeof TkProgress.Type
+
+/** Tabs of a Notebook: the frame of each tab, its text and state; `current` is the shown tab (-1: none). */
+export const TkTabs = Schema.Struct({
+  tabs: Schema.Array(Schema.Tuple([Schema.Number, Schema.String, Schema.String])),
+  current: Schema.Number
+})
+export type TkTabs = typeof TkTabs.Type
+
+/**
+ * A Treeview: columns (heading, width, anchor of the cells, anchor of the heading) and the shown rows (depth,
+ * has children, open, cells, colour, background, selected). `tree`: the first column is the tree.
+ */
+export const TkTree = Schema.Struct({
+  columns: Schema.Array(Schema.Tuple([Schema.String, Schema.Number, Schema.String, Schema.String])),
+  rows: Schema.Array(Schema.Tuple([Schema.Number, Schema.Boolean, Schema.Boolean, Schema.Array(Schema.String), Schema.String, Schema.String, Schema.Boolean])),
+  tree: Schema.Boolean,
+  headings: Schema.Boolean,
+  height: Schema.Number,
+  mode: Schema.String
+})
+export type TkTree = typeof TkTree.Type
+
 /**
  * A widget. `width` and `height` are in characters and lines for Label, Button, Entry and Text (as in Tk),
  * in pixels for Frame and Canvas. `rev` grows when the program changes the text of an Entry or a Text.
@@ -251,7 +306,19 @@ export const TkWidget = Schema.Struct({
   scroll: Schema.OptionFromNullOr(TkScroll),
   menu: Schema.OptionFromNullOr(TkMenu),
   /** The Menu that a Menubutton opens, or 0. */
-  opens: Schema.Number
+  opens: Schema.Number,
+  /** Colours of a pressed button (`activebackground`, `activeforeground`), "" for the usual ones. */
+  activeBg: Schema.String,
+  activeFg: Schema.String,
+  /** The relief under the mouse pointer (`overrelief`), or "". */
+  overrelief: Schema.String,
+  /** The colour of the text cursor of a field (`insertbackground`), or "". */
+  caret: Schema.String,
+  /** "horizontal", "vertical" or "" (Separator, Progressbar, PanedWindow). */
+  orient: Schema.String,
+  progress: Schema.OptionFromNullOr(TkProgress),
+  tabs: Schema.OptionFromNullOr(TkTabs),
+  tree: Schema.OptionFromNullOr(TkTree)
 })
 export type TkWidget = typeof TkWidget.Type
 

@@ -112,6 +112,7 @@ export function TextView(props: Readonly<{ widget: TkWidget; layout: CSSProperti
     width: `${Math.max(1, w.width)}ch`,
     height: `${Math.max(1, w.height) * LineHeight}em`,
     font: w.font,
+    ...(w.caret === "" ? {} : { caretColor: w.caret }),
     ...wrapping(w),
     scrollbarGutter: nativeBar ? "stable" : undefined,
     scrollbarWidth: nativeBar ? undefined : "none"

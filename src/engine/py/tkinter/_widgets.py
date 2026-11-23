@@ -48,6 +48,12 @@ class Widget(Misc):
         master._kids.append(self)
         master.children[name] = self
         self._init()
+        if app.option_db:
+            given = set(self._canonical(key) for key in options if key != "cnf")
+            defaults = self._option_defaults(given)
+            if defaults:
+                self._configure(defaults)
+                self._explicit = set()
         self._configure(options)
 
     _defaults = BASE_OPTIONS
@@ -255,6 +261,14 @@ class Widget(Misc):
                 "scroll": None,
                 "menu": None,
                 "opens": 0,
+                "activeBg": _style.color(opts.get("activebackground", "")),
+                "activeFg": _style.color(opts.get("activeforeground", "")),
+                "overrelief": str(opts.get("overrelief", "")),
+                "caret": _style.color(opts.get("insertbackground", "")),
+                "orient": str(opts.get("orient", "")),
+                "progress": None,
+                "tabs": None,
+                "tree": None,
             }
         )
         return scene
@@ -476,11 +490,74 @@ class LabelFrame(Widget):
     _class = "Labelframe"
     _defaults = _LABELFRAME_OPTIONS
 
-def _unsupported(name):
-    def create(*args, **kw):
-        raise NotImplementedError("%s isn't available in the browser yet: run the program in IDLE" % name)
+_PANED_OPTIONS = dict(_FRAME_OPTIONS)
+_PANED_OPTIONS.update(
+    {
+        "class": "Panedwindow",
+        "borderwidth": 1,
+        "handlepad": 8,
+        "handlesize": 8,
+        "opaqueresize": 1,
+        "orient": "horizontal",
+        "proxybackground": "",
+        "proxyborderwidth": 2,
+        "proxyrelief": "flat",
+        "relief": "flat",
+        "sashcursor": "",
+        "sashpad": 0,
+        "sashrelief": "flat",
+        "sashwidth": 3,
+        "showhandle": 0,
+        "style": "",
+    }
+)
 
-    return create
+
+class PanedWindow(Frame):
+    """Panes side by side (or one above another): `add(widget)` puts the next pane."""
+
+    _class = "Panedwindow"
+    _defaults = _PANED_OPTIONS
+
+    def _init(self):
+        self._panes = []
+
+    def add(self, child, **kw):
+        if child in self._panes:
+            self._panes.remove(child)
+        self._panes.append(child)
+        vertical = str(self._opts.get("orient", "horizontal")).startswith("v")
+        weight = kw.get("weight", 1)
+        child.pack(side="top" if vertical else "left", fill="both", expand=_style.flag(weight) if weight is not None else True)
+
+    def insert(self, pos, child, **kw):
+        self.add(child, **kw)
+
+    def forget(self, child):
+        if child in self._panes:
+            self._panes.remove(child)
+        child.pack_forget()
+
+    remove = forget
+
+    def panes(self):
+        return tuple(self._panes)
+
+    def paneconfigure(self, tagOrId, cnf=None, **kw):
+        return None
+
+    paneconfig = paneconfigure
+
+    def pane(self, pane, option=None, **kw):
+        return None
+
+    def sash_coord(self, index):
+        return (0, 0)
+
+    def sash_place(self, index, x, y):
+        pass
+
+    def sashpos(self, index, newpos=None):
+        return 0
 
 
-PanedWindow = _unsupported("PanedWindow")
