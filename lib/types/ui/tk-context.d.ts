@@ -27,6 +27,7 @@ export declare const TkWindowContext: import("react").Context<Option.Option<{
     readonly padx: number;
     readonly pady: number;
     readonly highlight: number;
+    readonly cursor: string;
     readonly propagate: boolean;
     readonly columns: readonly (readonly [number, number, number])[];
     readonly rows: readonly (readonly [number, number, number])[];
@@ -37,6 +38,12 @@ export declare const TkWindowContext: import("react").Context<Option.Option<{
     readonly minHeight: number;
     readonly x: number;
     readonly y: number;
+    readonly placed: boolean;
+    readonly z: number;
+    readonly minSize: readonly [number, number];
+    readonly maxSize: readonly [number, number];
+    readonly alpha: number;
+    readonly zoomed: boolean;
     readonly visible: boolean;
     readonly decorated: boolean;
     readonly menu: number;

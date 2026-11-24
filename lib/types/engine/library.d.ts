@@ -26,6 +26,8 @@ export declare const LibraryFiles: {
     readonly TkSimpledialog: "tkinter/simpledialog.py";
     readonly TkColorchooser: "tkinter/colorchooser.py";
     readonly TkScrolledtext: "tkinter/scrolledtext.py";
+    readonly TkThemedWidgets: "tkinter/_themed.py";
+    readonly TkFont: "tkinter/font.py";
 };
 export type LibraryFile = (typeof LibraryFiles)[keyof typeof LibraryFiles];
 /** The text of each module. */

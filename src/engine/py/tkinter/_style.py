@@ -166,8 +166,25 @@ def _size(value):
             raise TclError('expected integer but got "%s"' % (value,))
 
 
+# Named fonts of `tkinter.font` (Font objects) by name: a widget with such a font changes with the font.
+named_fonts = {}
+
+
+def _named(value):
+    if hasattr(value, "_font_spec"):
+        return value._font_spec()
+    if isinstance(value, str):
+        found = named_fonts.get(value) or named_fonts.get(value.lower())
+        if found is not None:
+            return found._font_spec()
+    return None
+
+
 def font(value):
-    """(CSS `font`, underline) of a Tk font: "Arial 14", ("Arial", 14, "bold"), "Arial, 20"."""
+    """(CSS `font`, underline) of a Tk font: "Arial 14", ("Arial", 14, "bold"), "Arial, 20", a Font."""
+    spec = _named(value)
+    if spec is not None:
+        value = spec
     parts = _font_parts(value)
     family = str(parts[0])
     size = None
@@ -272,3 +289,63 @@ def tcl_text(value):
     if value is False:
         return "0"
     return str(value)
+
+
+# Tk cursor names and the CSS cursors that look like them.
+_CURSORS = {
+    "arrow": "default",
+    "left_ptr": "default",
+    "top_left_arrow": "default",
+    "hand1": "pointer",
+    "hand2": "pointer",
+    "heart": "pointer",
+    "xterm": "text",
+    "ibeam": "text",
+    "watch": "wait",
+    "clock": "wait",
+    "cross": "crosshair",
+    "crosshair": "crosshair",
+    "tcross": "crosshair",
+    "plus": "cell",
+    "pencil": "crosshair",
+    "spraycan": "crosshair",
+    "target": "crosshair",
+    "dotbox": "crosshair",
+    "fleur": "move",
+    "size": "move",
+    "circle": "not-allowed",
+    "x_cursor": "not-allowed",
+    "pirate": "not-allowed",
+    "no": "not-allowed",
+    "question_arrow": "help",
+    "sb_h_double_arrow": "ew-resize",
+    "size_we": "ew-resize",
+    "sb_v_double_arrow": "ns-resize",
+    "size_ns": "ns-resize",
+    "size_nw_se": "nwse-resize",
+    "size_ne_sw": "nesw-resize",
+    "bottom_right_corner": "nwse-resize",
+    "top_left_corner": "nwse-resize",
+    "bottom_left_corner": "nesw-resize",
+    "top_right_corner": "nesw-resize",
+    "sizing": "nwse-resize",
+    "exchange": "move",
+    "dot": "default",
+    "icon": "default",
+    "man": "default",
+    "mouse": "default",
+    "star": "default",
+    "trek": "default",
+    "gumby": "default",
+    "spider": "default",
+    "boat": "default",
+    "coffee_mug": "default",
+}
+
+
+def cursor(value):
+    """CSS cursor of a Tk cursor name ("hand2", "watch"…); "" when the widget has none."""
+    text = str(value or "").strip().lower()
+    if text == "":
+        return ""
+    return _CURSORS.get(text.split()[0], "default")

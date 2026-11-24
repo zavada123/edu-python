@@ -43,6 +43,8 @@ class _App:
         self.downloads = []  # files that the program saved through `filedialog`: the page offers to download them
         self.answers = _answers()
         self.answer_at = 0
+        self.option_db = []  # (class or name, option, value) of `option_add`
+        self.next_z = 0  # the order of windows: a window with a bigger number is on top (`lift`)
 
 
 class _Ask(BaseException):
@@ -197,6 +199,7 @@ class Misc:
         self._kids = []
         self._binds = Bindings()
         self._opts = dict(options)
+        self._explicit = set()  # options that the program set (ttk styles do not change them)
         self._box = None
         self._manager = None
         self._info = None
@@ -244,6 +247,7 @@ class Misc:
         for name, value in checked:
             old = self._opts.get(name)
             self._opts[name] = value
+            self._explicit.add(name)
             self._changed(name, old, value)
         touch()
 
@@ -433,7 +437,33 @@ class Misc:
         return func
 
     def option_add(self, pattern, value, priority=None):
-        pass
+        # "*Font", "*Button.background", "*Label*foreground": defaults for the widgets made after it.
+        parts = [p for p in str(pattern).replace("*", ".").split(".") if p != ""]
+        if not parts:
+            return
+        option = parts[-1]
+        option = ALIASES.get(option, option[0].lower() + option[1:])
+        app.option_db.append((parts[-2] if len(parts) > 1 else "", option.lower(), value))
+
+    def option_clear(self):
+        app.option_db = []
+
+    def option_get(self, name, className):
+        found = ""
+        for owner, option, value in app.option_db:
+            if option == str(name).lower() and owner in ("", self._class, className, self.winfo_name()):
+                found = value
+        return found
+
+    def _option_defaults(self, given):
+        """Options of `option_add` for a new widget: the program's own options win."""
+        found = {}
+        for owner, option, value in app.option_db:
+            if owner not in ("", self._class, self._kind, self.winfo_name()):
+                continue
+            if option in self._opts and option not in given:
+                found[option] = value
+        return found
 
     def tk_setPalette(self, *args, **kw):
         pass
@@ -649,6 +679,7 @@ class Misc:
             "padx": _style.number(self._opts.get("padx", 0)),
             "pady": _style.number(self._opts.get("pady", 0)),
             "highlight": _style.number(self._opts.get("highlightthickness", 0)),
+            "cursor": _style.cursor(self._opts.get("cursor", "")),
             "propagate": self._propagate,
             "columns": [[i, c["weight"], c["minsize"]] for i, c in self._columns.items()],
             "rows": [[i, r["weight"], r["minsize"]] for i, r in self._rows.items()],

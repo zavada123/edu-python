@@ -159,6 +159,13 @@ export type TkInput =
     readonly _tag: "Close";
     readonly widget: number;
 }
+/** The student dragged a window by its title bar: its new place on the "screen". */
+ | {
+    readonly _tag: "Move";
+    readonly widget: number;
+    readonly x: number;
+    readonly y: number;
+}
 /** The page shows a window for the first time (`<Map>`, `<Expose>`, `<Configure>`). */
  | {
     readonly _tag: "Shown";
@@ -182,6 +189,18 @@ export type TkInput =
     readonly _tag: "Pick";
     readonly widget: number;
     readonly items: ReadonlyArray<number>;
+}
+/** The student opened or closed a row of a Treeview: the number of the shown row. */
+ | {
+    readonly _tag: "Toggle";
+    readonly widget: number;
+    readonly index: number;
+}
+/** A click on a heading of a Treeview: the number of the shown column. */
+ | {
+    readonly _tag: "Heading";
+    readonly widget: number;
+    readonly index: number;
 }
 /** An arrow of a Spinbox. */
  | {

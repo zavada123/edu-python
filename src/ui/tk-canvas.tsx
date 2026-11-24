@@ -147,7 +147,39 @@ function TextItem(props: Readonly<{ item: TkItem }>) {
   )
 }
 
-function CanvasItem(props: Readonly<{ item: TkItem }>): ReactNode {
+/** Draws a widget of the program: the Canvas shows the widgets of `create_window`. */
+export type ChildView = (widget: TkWidget, layout: CSSProperties) => ReactNode
+
+const windowShift = (anchor: string): string => {
+  const x = anchor.includes("w") ? "0" : anchor.includes("e") ? "-100%" : "-50%"
+  const y = anchor.startsWith("n") ? "0" : anchor.startsWith("s") ? "-100%" : "-50%"
+  return `translate(${x}, ${y})`
+}
+
+/** A widget on the canvas (`create_window`): at the point of the figure, by its anchor. */
+function WindowItem(props: Readonly<{ item: TkItem; child: ChildView }>) {
+  const tk = useTk()
+  const item = props.item
+  const widget = tk.scene.widgets.find((w) => w.id === item.window)
+  if (widget === undefined) return null
+  const layout: CSSProperties = {
+    position: "absolute",
+    left: item.coords[0] ?? 0,
+    top: item.coords[1] ?? 0,
+    transform: windowShift(item.anchor),
+    pointerEvents: "auto",
+    margin: 0,
+    ...(item.width > 0 ? { width: item.width, boxSizing: "border-box" } : {}),
+    ...(item.height > 0 ? { height: item.height, boxSizing: "border-box" } : {})
+  }
+  return (
+    <foreignObject x={0} y={0} width="100%" height="100%" style={{ pointerEvents: "none", overflow: "visible" }}>
+      <div style={{ position: "relative", width: "100%", height: "100%" }}>{props.child(widget, layout)}</div>
+    </foreignObject>
+  )
+}
+
+function CanvasItem(props: Readonly<{ item: TkItem; child: ChildView }>): ReactNode {
   const item = props.item
   if (item.hidden) return null
   const id = { [TkItemAttribute]: item.id }
@@ -168,12 +200,13 @@ function CanvasItem(props: Readonly<{ item: TkItem }>): ReactNode {
       <path {...id} d={arcPath(item)} fill={item.style === "arc" ? "none" : paint(item.fill)} {...stroke(item, item.outline)} />
     )),
     Match.when(TkItemTypes.Text, () => <TextItem item={item} />),
+    Match.when(TkItemTypes.Window, () => <WindowItem item={item} child={props.child} />),
     Match.when(TkItemTypes.Image, () => <TkCanvasPicture id={item.image} x={item.coords[0] ?? 0} y={item.coords[1] ?? 0} anchor={item.anchor} item={item.id} />),
     Match.exhaustive
   )
 }
 
-export function TkCanvasView(props: Readonly<{ widget: TkWidget; layout: CSSProperties }>) {
+export function TkCanvasView(props: Readonly<{ widget: TkWidget; layout: CSSProperties; child: ChildView }>) {
   const tk = useTk()
   const events = useWidgetEvents(props.widget.id)
   const w = props.widget
@@ -190,10 +223,9 @@ export function TkCanvasView(props: Readonly<{ widget: TkWidget; layout: CSSProp
       aria-label="Полотно програми"
       width={width}
       height={height}
-      viewBox={`0 0 ${width} ${height}`}
-      style={{ display: "block", flex: "none", background: w.bg === "" ? "transparent" : w.bg, overflow: "hidden", touchAction: drags ? "none" : undefined, ...props.layout }}
+      style={{ display: "block", flex: "none", background: w.bg === "" ? "transparent" : w.bg, overflow: "hidden", touchAction: drags ? "none" : undefined, ...(w.cursor === "" ? {} : { cursor: w.cursor }), ...props.layout }}
     >
-      {w.items.map((item) => <CanvasItem key={item.id} item={item} />)}
+      {w.items.map((item) => <CanvasItem key={item.id} item={item} child={props.child} />)}
     </svg>
   )
 }

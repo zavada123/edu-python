@@ -1,9 +1,11 @@
 # Windows of the browser tkinter: `Tk` (the main window) and `Toplevel`. The page draws each window with
-# a title bar; `geometry` sets the size and the place on the "screen" (the page shows the place as numbers).
+# a title bar; `geometry` sets the size and the place on the "screen": the page keeps the windows where the
+# program put them (one window beside another) and shows the screen with the windows in small.
 from tkinter import _core, _style
 from tkinter._core import BASE_OPTIONS, Misc, TclError, app, touch
 
 DefaultSize = 200
+_Cascade = 30
 
 
 def _digits(text, start):
@@ -89,6 +91,13 @@ class Wm:
         self._protocols = {}
         self._decorated = True
         self._shown_once = False
+        self._placed = False
+        self._min = (1, 1)
+        self._max = (_core.ScreenWidth, _core.ScreenHeight)
+        self._attributes = {"alpha": 1.0, "topmost": 0, "fullscreen": 0, "toolwindow": 0, "disabled": 0, "transparentcolor": ""}
+        self._zoomed = False
+        app.next_z += 1
+        self._z = app.next_z
 
     def title(self, string=None):
         if string is None:
@@ -122,6 +131,7 @@ class Wm:
             width, height = self._current_size()
             self._x = _core.ScreenWidth - width - x if x_from_end else x
             self._y = _core.ScreenHeight - height - y if y_from_end else y
+            self._placed = True
         touch()
         return ""
 
@@ -134,16 +144,56 @@ class Wm:
 
     wm_resizable = resizable
 
+    def _limit(self, name, width, height):
+        if width is None and height is None:
+            return getattr(self, name)
+        old = getattr(self, name)
+        setattr(self, name, (_style.integer(width if width is not None else old[0]), _style.integer(height if height is not None else old[1])))
+        touch()
+        return ""
+
     def minsize(self, width=None, height=None):
-        return (1, 1)
+        return self._limit("_min", width, height)
 
     def maxsize(self, width=None, height=None):
-        return (_core.ScreenWidth, _core.ScreenHeight)
+        return self._limit("_max", width, height)
 
     wm_minsize = minsize
     wm_maxsize = maxsize
 
     def attributes(self, *args, **kw):
+        # attributes("-alpha", 0.5), attributes("-topmost", True), attributes("-alpha"), attributes()
+        # and attributes(alpha=0.5).
+        changes = []
+        index = 0
+        while index < len(args):
+            name = str(args[index]).lstrip("-")
+            if index + 1 >= len(args):
+                if name not in self._attributes:
+                    raise TclError('bad attribute "-%s": must be -alpha, -transparentcolor, -disabled, -fullscreen, -toolwindow, or -topmost' % name)
+                return self._attributes[name]
+            changes.append((name, args[index + 1]))
+            index += 2
+        for key in kw:
+            changes.append((key.lstrip("-"), kw[key]))
+        if not changes:
+            found = []
+            for name in ("alpha", "transparentcolor", "disabled", "fullscreen", "toolwindow", "topmost"):
+                found += ["-" + name, self._attributes[name]]
+            return tuple(found)
+        for name, value in changes:
+            if name not in self._attributes:
+                raise TclError('bad attribute "-%s": must be -alpha, -transparentcolor, -disabled, -fullscreen, -toolwindow, or -topmost' % name)
+            if name == "alpha":
+                value = min(1.0, max(0.0, float(_style.number(value))))
+            elif name == "transparentcolor":
+                value = str(value)
+            else:
+                value = 1 if _style.flag(value) else 0
+            self._attributes[name] = value
+            if name == "topmost" and value:
+                self.lift()
+        touch()
         return ""
 
     wm_attributes = attributes
@@ -185,8 +235,12 @@ class Wm:
 
     def state(self, newstate=None):
         if newstate is None:
-            return "normal" if self._visible else "withdrawn"
-        self._visible = str(newstate) not in ("withdrawn", "iconic")
+            if not self._visible:
+                return "withdrawn"
+            return "zoomed" if self._zoomed else "normal"
+        newstate = str(newstate)
+        self._visible = newstate not in ("withdrawn", "iconic")
+        self._zoomed = newstate == "zoomed"
         touch()
         return ""
 
@@ -201,12 +255,31 @@ class Wm:
     wm_overrideredirect = overrideredirect
 
     def lift(self, aboveThis=None):
-        pass
+        app.next_z += 1
+        self._z = app.next_z
+        touch()
 
     tkraise = lift
+    wm_lift = lift
 
     def lower(self, belowThis=None):
-        pass
+        lowest = min([w._z for w in app.widgets if w._kind == "Window"] + [self._z])
+        self._z = lowest - 1
+        touch()
+
+    def _moved(self, x, y):
+        # The student dragged the window by its title bar: Tk sends <Configure> with the new place.
+        self._x = x
+        self._y = y
+        self._placed = True
+        event = _core.Event("Configure", self)
+        event.x = x
+        event.y = y
+        width, height = self._current_size()
+        event.width = width
+        event.height = height
+        self._fire(event)
+        touch()
 
     def transient(self, master=None):
         pass
@@ -270,6 +343,12 @@ class Wm:
                 "minHeight": _style.number(self._opts["height"]),
                 "x": self._x,
                 "y": self._y,
+                "placed": self._placed,
+                "z": self._z + (1000000 if self._attributes["topmost"] else 0),
+                "minSize": list(self._min),
+                "maxSize": list(self._max),
+                "alpha": self._attributes["alpha"],
+                "zoomed": self._zoomed or self._attributes["fullscreen"] == 1,
                 "visible": self._visible,
                 "decorated": self._decorated,
                 "menu": self._menu_bar(),
@@ -312,5 +391,11 @@ class Toplevel(Wm, Misc):
         path = "%s.%s" % (base, name if name is not None else "!toplevel" + ("" if count == 1 else str(count)))
         self._setup(master, path, _WINDOW_OPTIONS, cnf, kw)
         self._wm_setup()
+        # The window manager puts a new window a little lower and to the right of the last one.
+        others = [w for w in app.widgets if w._kind == "Window" and w is not self and w._alive]
+        if others:
+            last = others[-1]
+            self._x = last._x + _Cascade
+            self._y = last._y + _Cascade
         master._kids.append(self)
         master.children[path.split(".")[-1]] = self

@@ -20,8 +20,12 @@ export declare const TkWidgetKinds: {
     readonly Scrollbar: "Scrollbar";
     readonly Menu: "Menu";
     readonly Menubutton: "Menubutton";
+    readonly Progressbar: "Progressbar";
+    readonly Separator: "Separator";
+    readonly Notebook: "Notebook";
+    readonly Treeview: "Treeview";
 };
-export declare const TkWidgetKind: Schema.Literals<("Button" | "Canvas" | "Checkbutton" | "Combobox" | "Entry" | "Frame" | "Label" | "LabelFrame" | "Listbox" | "Menu" | "Menubutton" | "Radiobutton" | "Scale" | "Scrollbar" | "Spinbox" | "Text")[]>;
+export declare const TkWidgetKind: Schema.Literals<("Button" | "Canvas" | "Checkbutton" | "Combobox" | "Entry" | "Frame" | "Label" | "LabelFrame" | "Listbox" | "Menu" | "Menubutton" | "Notebook" | "Progressbar" | "Radiobutton" | "Scale" | "Scrollbar" | "Separator" | "Spinbox" | "Text" | "Treeview")[]>;
 export type TkWidgetKind = typeof TkWidgetKind.Type;
 export declare const TkManagerKinds: {
     readonly Pack: "pack";
@@ -39,8 +43,9 @@ export declare const TkItemTypes: {
     readonly Arc: "arc";
     readonly Text: "text";
     readonly Image: "image";
+    readonly Window: "window";
 };
-export declare const TkItemType: Schema.Literals<("arc" | "image" | "line" | "oval" | "polygon" | "rectangle" | "text")[]>;
+export declare const TkItemType: Schema.Literals<("arc" | "image" | "line" | "oval" | "polygon" | "rectangle" | "text" | "window")[]>;
 export type TkItemType = typeof TkItemType.Type;
 export declare const TkDialogIcons: {
     readonly Info: "info";
@@ -71,6 +76,7 @@ export declare const TkWindow: Schema.Struct<{
     readonly padx: Schema.Number;
     readonly pady: Schema.Number;
     readonly highlight: Schema.Number;
+    readonly cursor: Schema.String;
     readonly propagate: Schema.Boolean;
     readonly columns: Schema.$Array<Schema.Tuple<readonly [Schema.Number, Schema.Number, Schema.Number]>>;
     readonly rows: Schema.$Array<Schema.Tuple<readonly [Schema.Number, Schema.Number, Schema.Number]>>;
@@ -81,6 +87,17 @@ export declare const TkWindow: Schema.Struct<{
     readonly minHeight: Schema.Number;
     readonly x: Schema.Number;
     readonly y: Schema.Number;
+    /** The program or the student put the window on a place of the screen (`geometry("+100+50")`). */
+    readonly placed: Schema.Boolean;
+    /** The order of windows: a bigger number is on top (`lift`, `-topmost`). */
+    readonly z: Schema.Number;
+    /** `minsize` and `maxsize`: width, height. */
+    readonly minSize: Schema.Tuple<readonly [Schema.Number, Schema.Number]>;
+    readonly maxSize: Schema.Tuple<readonly [Schema.Number, Schema.Number]>;
+    /** `attributes("-alpha", …)`: 0…1. */
+    readonly alpha: Schema.Number;
+    /** `state("zoomed")` or `attributes("-fullscreen", True)`: the window takes the whole width. */
+    readonly zoomed: Schema.Boolean;
     readonly visible: Schema.Boolean;
     readonly decorated: Schema.Boolean;
     /** The Menu of the menu bar, or 0. */
@@ -117,7 +134,7 @@ export type TkManager = typeof TkManager.Type;
 /** A canvas figure. Colours are CSS, "" is no colour. */
 export declare const TkItem: Schema.Struct<{
     readonly id: Schema.Number;
-    readonly type: Schema.Literals<("arc" | "image" | "line" | "oval" | "polygon" | "rectangle" | "text")[]>;
+    readonly type: Schema.Literals<("arc" | "image" | "line" | "oval" | "polygon" | "rectangle" | "text" | "window")[]>;
     readonly coords: Schema.$Array<Schema.Number>;
     readonly fill: Schema.String;
     readonly outline: Schema.String;
@@ -141,6 +158,9 @@ export declare const TkItem: Schema.Struct<{
     readonly hidden: Schema.Boolean;
     /** The PhotoImage of an image figure, or 0. */
     readonly image: Schema.Number;
+    /** The widget of a window figure (`create_window`), or 0; `width`, `height`: its size, 0 is its own size. */
+    readonly window: Schema.Number;
+    readonly height: Schema.Number;
 }>;
 export type TkItem = typeof TkItem.Type;
 export declare const TkScale: Schema.Struct<{
@@ -224,6 +244,37 @@ export declare const TkMenu: Schema.Struct<{
     readonly posted: Schema.NullOr<Schema.Tuple<readonly [Schema.Number, Schema.Number, Schema.Number]>>;
 }>;
 export type TkMenu = typeof TkMenu.Type;
+/** A Progressbar of ttk: `value` of `maximum`; an "indeterminate" bar that `running` moves by itself. */
+export declare const TkProgress: Schema.Struct<{
+    readonly value: Schema.Number;
+    readonly maximum: Schema.Number;
+    readonly mode: Schema.String;
+    readonly running: Schema.Boolean;
+    readonly length: Schema.Number;
+    /** Colours of the bar and of the trough from `ttk.Style`, or "". */
+    readonly bar: Schema.String;
+    readonly trough: Schema.String;
+}>;
+export type TkProgress = typeof TkProgress.Type;
+/** Tabs of a Notebook: the frame of each tab, its text and state; `current` is the shown tab (-1: none). */
+export declare const TkTabs: Schema.Struct<{
+    readonly tabs: Schema.$Array<Schema.Tuple<readonly [Schema.Number, Schema.String, Schema.String]>>;
+    readonly current: Schema.Number;
+}>;
+export type TkTabs = typeof TkTabs.Type;
+/**
+ * A Treeview: columns (heading, width, anchor of the cells, anchor of the heading) and the shown rows (depth,
+ * has children, open, cells, colour, background, selected). `tree`: the first column is the tree.
+ */
+export declare const TkTree: Schema.Struct<{
+    readonly columns: Schema.$Array<Schema.Tuple<readonly [Schema.String, Schema.Number, Schema.String, Schema.String]>>;
+    readonly rows: Schema.$Array<Schema.Tuple<readonly [Schema.Number, Schema.Boolean, Schema.Boolean, Schema.$Array<Schema.String>, Schema.String, Schema.String, Schema.Boolean]>>;
+    readonly tree: Schema.Boolean;
+    readonly headings: Schema.Boolean;
+    readonly height: Schema.Number;
+    readonly mode: Schema.String;
+}>;
+export type TkTree = typeof TkTree.Type;
 /**
  * A widget. `width` and `height` are in characters and lines for Label, Button, Entry and Text (as in Tk),
  * in pixels for Frame and Canvas. `rev` grows when the program changes the text of an Entry or a Text.
@@ -237,11 +288,12 @@ export declare const TkWidget: Schema.Struct<{
     readonly padx: Schema.Number;
     readonly pady: Schema.Number;
     readonly highlight: Schema.Number;
+    readonly cursor: Schema.String;
     readonly propagate: Schema.Boolean;
     readonly columns: Schema.$Array<Schema.Tuple<readonly [Schema.Number, Schema.Number, Schema.Number]>>;
     readonly rows: Schema.$Array<Schema.Tuple<readonly [Schema.Number, Schema.Number, Schema.Number]>>;
     readonly parent: Schema.Number;
-    readonly kind: Schema.Literals<("Button" | "Canvas" | "Checkbutton" | "Combobox" | "Entry" | "Frame" | "Label" | "LabelFrame" | "Listbox" | "Menu" | "Menubutton" | "Radiobutton" | "Scale" | "Scrollbar" | "Spinbox" | "Text")[]>;
+    readonly kind: Schema.Literals<("Button" | "Canvas" | "Checkbutton" | "Combobox" | "Entry" | "Frame" | "Label" | "LabelFrame" | "Listbox" | "Menu" | "Menubutton" | "Notebook" | "Progressbar" | "Radiobutton" | "Scale" | "Scrollbar" | "Separator" | "Spinbox" | "Text" | "Treeview")[]>;
     readonly manager: Schema.Struct<{
         readonly kind: Schema.Literals<("grid" | "none" | "pack" | "place")[]>;
         readonly order: Schema.Number;
@@ -285,7 +337,7 @@ export declare const TkWidget: Schema.Struct<{
     readonly textwrap: Schema.String;
     readonly items: Schema.$Array<Schema.Struct<{
         readonly id: Schema.Number;
-        readonly type: Schema.Literals<("arc" | "image" | "line" | "oval" | "polygon" | "rectangle" | "text")[]>;
+        readonly type: Schema.Literals<("arc" | "image" | "line" | "oval" | "polygon" | "rectangle" | "text" | "window")[]>;
         readonly coords: Schema.$Array<Schema.Number>;
         readonly fill: Schema.String;
         readonly outline: Schema.String;
@@ -309,6 +361,9 @@ export declare const TkWidget: Schema.Struct<{
         readonly hidden: Schema.Boolean;
         /** The PhotoImage of an image figure, or 0. */
         readonly image: Schema.Number;
+        /** The widget of a window figure (`create_window`), or 0; `width`, `height`: its size, 0 is its own size. */
+        readonly window: Schema.Number;
+        readonly height: Schema.Number;
     }>>;
     readonly scale: Schema.OptionFromNullOr<Schema.Struct<{
         readonly from: Schema.Number;
@@ -358,6 +413,37 @@ export declare const TkWidget: Schema.Struct<{
     }>>;
     /** The Menu that a Menubutton opens, or 0. */
     readonly opens: Schema.Number;
+    /** Colours of a pressed button (`activebackground`, `activeforeground`), "" for the usual ones. */
+    readonly activeBg: Schema.String;
+    readonly activeFg: Schema.String;
+    /** The relief under the mouse pointer (`overrelief`), or "". */
+    readonly overrelief: Schema.String;
+    /** The colour of the text cursor of a field (`insertbackground`), or "". */
+    readonly caret: Schema.String;
+    /** "horizontal", "vertical" or "" (Separator, Progressbar, PanedWindow). */
+    readonly orient: Schema.String;
+    readonly progress: Schema.OptionFromNullOr<Schema.Struct<{
+        readonly value: Schema.Number;
+        readonly maximum: Schema.Number;
+        readonly mode: Schema.String;
+        readonly running: Schema.Boolean;
+        readonly length: Schema.Number;
+        /** Colours of the bar and of the trough from `ttk.Style`, or "". */
+        readonly bar: Schema.String;
+        readonly trough: Schema.String;
+    }>>;
+    readonly tabs: Schema.OptionFromNullOr<Schema.Struct<{
+        readonly tabs: Schema.$Array<Schema.Tuple<readonly [Schema.Number, Schema.String, Schema.String]>>;
+        readonly current: Schema.Number;
+    }>>;
+    readonly tree: Schema.OptionFromNullOr<Schema.Struct<{
+        readonly columns: Schema.$Array<Schema.Tuple<readonly [Schema.String, Schema.Number, Schema.String, Schema.String]>>;
+        readonly rows: Schema.$Array<Schema.Tuple<readonly [Schema.Number, Schema.Boolean, Schema.Boolean, Schema.$Array<Schema.String>, Schema.String, Schema.String, Schema.Boolean]>>;
+        readonly tree: Schema.Boolean;
+        readonly headings: Schema.Boolean;
+        readonly height: Schema.Number;
+        readonly mode: Schema.String;
+    }>>;
 }>;
 export type TkWidget = typeof TkWidget.Type;
 /** `focus`: the widget of `focus_set()`; `focusRev` grows on each call, so the page moves the focus once. */
@@ -371,6 +457,7 @@ export declare const TkScene: Schema.Struct<{
         readonly padx: Schema.Number;
         readonly pady: Schema.Number;
         readonly highlight: Schema.Number;
+        readonly cursor: Schema.String;
         readonly propagate: Schema.Boolean;
         readonly columns: Schema.$Array<Schema.Tuple<readonly [Schema.Number, Schema.Number, Schema.Number]>>;
         readonly rows: Schema.$Array<Schema.Tuple<readonly [Schema.Number, Schema.Number, Schema.Number]>>;
@@ -381,6 +468,17 @@ export declare const TkScene: Schema.Struct<{
         readonly minHeight: Schema.Number;
         readonly x: Schema.Number;
         readonly y: Schema.Number;
+        /** The program or the student put the window on a place of the screen (`geometry("+100+50")`). */
+        readonly placed: Schema.Boolean;
+        /** The order of windows: a bigger number is on top (`lift`, `-topmost`). */
+        readonly z: Schema.Number;
+        /** `minsize` and `maxsize`: width, height. */
+        readonly minSize: Schema.Tuple<readonly [Schema.Number, Schema.Number]>;
+        readonly maxSize: Schema.Tuple<readonly [Schema.Number, Schema.Number]>;
+        /** `attributes("-alpha", …)`: 0…1. */
+        readonly alpha: Schema.Number;
+        /** `state("zoomed")` or `attributes("-fullscreen", True)`: the window takes the whole width. */
+        readonly zoomed: Schema.Boolean;
         readonly visible: Schema.Boolean;
         readonly decorated: Schema.Boolean;
         /** The Menu of the menu bar, or 0. */
@@ -395,11 +493,12 @@ export declare const TkScene: Schema.Struct<{
         readonly padx: Schema.Number;
         readonly pady: Schema.Number;
         readonly highlight: Schema.Number;
+        readonly cursor: Schema.String;
         readonly propagate: Schema.Boolean;
         readonly columns: Schema.$Array<Schema.Tuple<readonly [Schema.Number, Schema.Number, Schema.Number]>>;
         readonly rows: Schema.$Array<Schema.Tuple<readonly [Schema.Number, Schema.Number, Schema.Number]>>;
         readonly parent: Schema.Number;
-        readonly kind: Schema.Literals<("Button" | "Canvas" | "Checkbutton" | "Combobox" | "Entry" | "Frame" | "Label" | "LabelFrame" | "Listbox" | "Menu" | "Menubutton" | "Radiobutton" | "Scale" | "Scrollbar" | "Spinbox" | "Text")[]>;
+        readonly kind: Schema.Literals<("Button" | "Canvas" | "Checkbutton" | "Combobox" | "Entry" | "Frame" | "Label" | "LabelFrame" | "Listbox" | "Menu" | "Menubutton" | "Notebook" | "Progressbar" | "Radiobutton" | "Scale" | "Scrollbar" | "Separator" | "Spinbox" | "Text" | "Treeview")[]>;
         readonly manager: Schema.Struct<{
             readonly kind: Schema.Literals<("grid" | "none" | "pack" | "place")[]>;
             readonly order: Schema.Number;
@@ -443,7 +542,7 @@ export declare const TkScene: Schema.Struct<{
         readonly textwrap: Schema.String;
         readonly items: Schema.$Array<Schema.Struct<{
             readonly id: Schema.Number;
-            readonly type: Schema.Literals<("arc" | "image" | "line" | "oval" | "polygon" | "rectangle" | "text")[]>;
+            readonly type: Schema.Literals<("arc" | "image" | "line" | "oval" | "polygon" | "rectangle" | "text" | "window")[]>;
             readonly coords: Schema.$Array<Schema.Number>;
             readonly fill: Schema.String;
             readonly outline: Schema.String;
@@ -467,6 +566,9 @@ export declare const TkScene: Schema.Struct<{
             readonly hidden: Schema.Boolean;
             /** The PhotoImage of an image figure, or 0. */
             readonly image: Schema.Number;
+            /** The widget of a window figure (`create_window`), or 0; `width`, `height`: its size, 0 is its own size. */
+            readonly window: Schema.Number;
+            readonly height: Schema.Number;
         }>>;
         readonly scale: Schema.OptionFromNullOr<Schema.Struct<{
             readonly from: Schema.Number;
@@ -516,6 +618,37 @@ export declare const TkScene: Schema.Struct<{
         }>>;
         /** The Menu that a Menubutton opens, or 0. */
         readonly opens: Schema.Number;
+        /** Colours of a pressed button (`activebackground`, `activeforeground`), "" for the usual ones. */
+        readonly activeBg: Schema.String;
+        readonly activeFg: Schema.String;
+        /** The relief under the mouse pointer (`overrelief`), or "". */
+        readonly overrelief: Schema.String;
+        /** The colour of the text cursor of a field (`insertbackground`), or "". */
+        readonly caret: Schema.String;
+        /** "horizontal", "vertical" or "" (Separator, Progressbar, PanedWindow). */
+        readonly orient: Schema.String;
+        readonly progress: Schema.OptionFromNullOr<Schema.Struct<{
+            readonly value: Schema.Number;
+            readonly maximum: Schema.Number;
+            readonly mode: Schema.String;
+            readonly running: Schema.Boolean;
+            readonly length: Schema.Number;
+            /** Colours of the bar and of the trough from `ttk.Style`, or "". */
+            readonly bar: Schema.String;
+            readonly trough: Schema.String;
+        }>>;
+        readonly tabs: Schema.OptionFromNullOr<Schema.Struct<{
+            readonly tabs: Schema.$Array<Schema.Tuple<readonly [Schema.Number, Schema.String, Schema.String]>>;
+            readonly current: Schema.Number;
+        }>>;
+        readonly tree: Schema.OptionFromNullOr<Schema.Struct<{
+            readonly columns: Schema.$Array<Schema.Tuple<readonly [Schema.String, Schema.Number, Schema.String, Schema.String]>>;
+            readonly rows: Schema.$Array<Schema.Tuple<readonly [Schema.Number, Schema.Boolean, Schema.Boolean, Schema.$Array<Schema.String>, Schema.String, Schema.String, Schema.Boolean]>>;
+            readonly tree: Schema.Boolean;
+            readonly headings: Schema.Boolean;
+            readonly height: Schema.Number;
+            readonly mode: Schema.String;
+        }>>;
     }>>;
     readonly focus: Schema.Number;
     readonly focusRev: Schema.Number;

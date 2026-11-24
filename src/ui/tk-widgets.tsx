@@ -5,11 +5,12 @@ import { managedChildren, type TkManager, TkManagerKinds, type TkScene, type TkW
 import { useTk } from "./tk-context.ts"
 import { useWidgetEvents } from "./tk-events.ts"
 import { TkCanvasView } from "./tk-canvas.tsx"
-import { anchorX, anchorY, border, fieldStyle, textBox, useFieldText } from "./tk-field.ts"
+import { anchorX, anchorY, border, LineHeight, fieldStyle, textBox, useFieldText } from "./tk-field.ts"
 import { TextView } from "./tk-text.tsx"
 import { TkPicture } from "./tk-image.tsx"
 import { ComboboxView, ListboxView, ScrollbarView, SpinboxView } from "./tk-lists.tsx"
 import { MenubuttonView } from "./tk-menus.tsx"
+import { ThemedView } from "./tk-themed.tsx"
 
 // Widgets of a tkinter window and the geometry managers. Sizes follow Tk: `width` of a Label or a Button is
 // in characters (CSS `ch` is the width of "0", as in Tk), `height` is in lines; padx, pady and the border
@@ -62,9 +63,20 @@ function ButtonView(props: ViewProps) {
   const tk = useTk()
   const events = useWidgetEvents(props.widget.id)
   const [pressed, setPressed] = useState(false)
+  const [over, setOver] = useState(false)
   const w = props.widget
   const disabled = w.state === "disabled"
   const style = textBox(w)
+  // A pressed button: `activebackground`, `activeforeground` and a sunken border, as Tk on Windows.
+  const pressedStyle: CSSProperties = pressed
+    ? {
+      ...(w.relief === "raised" ? border("sunken", w.bd) : {}),
+      ...(w.activeBg === "" ? {} : { background: w.activeBg }),
+      ...(w.activeFg === "" ? {} : { color: w.activeFg })
+    }
+    : {}
+  // `overrelief`: the border under the mouse pointer.
+  const overStyle: CSSProperties = over && !pressed && !disabled && w.overrelief !== "" ? border(w.overrelief, w.bd) : {}
   return (
     <button
       type="button"
@@ -79,14 +91,19 @@ function ButtonView(props: ViewProps) {
         setPressed(false)
         events.onPointerUp(e)
       }}
+      onPointerEnter={(e) => {
+        setOver(true)
+        events.onPointerEnter(e)
+      }}
       onPointerLeave={(e) => {
         setPressed(false)
+        setOver(false)
         events.onPointerLeave(e)
       }}
       onClick={() => {
         if (!disabled && tk.active) tk.send({ _tag: "Invoke", widget: w.id })
       }}
-      style={{ ...style, ...(pressed && w.relief === "raised" ? border("sunken", w.bd) : {}), cursor: disabled ? "default" : "pointer", ...props.layout }}
+      style={{ ...style, ...overStyle, ...pressedStyle, cursor: w.cursor !== "" ? w.cursor : disabled ? "default" : "pointer", ...props.layout }}
     >
       <Caption widget={w} />
     </button>
@@ -125,7 +142,7 @@ function ChoiceView(props: ViewProps & Readonly<{ round: boolean }>) {
       onClick={() => {
         if (!disabled && tk.active) tk.send({ _tag: "Invoke", widget: w.id })
       }}
-      style={{ ...textBox(w), cursor: disabled ? "default" : "pointer", ...props.layout }}
+      style={{ ...textBox(w), cursor: w.cursor !== "" ? w.cursor : disabled ? "default" : "pointer", ...props.layout }}
     >
       {w.indicator && (
         <span aria-hidden style={mark}>
@@ -214,6 +231,7 @@ function FrameView(props: ViewProps) {
     ...border(w.relief, w.bd),
     padding: `${w.pady}px ${w.padx}px`,
     margin: w.highlight,
+    ...(w.cursor === "" ? {} : { cursor: w.cursor }),
     ...containerSize(tk.scene, w.id, w.propagate, w.width, w.height),
     ...props.layout
   }
@@ -242,13 +260,16 @@ export function TkWidgetView(props: ViewProps): ReactNode {
     Match.when(TkWidgetKinds.Text, () => <TextView {...props} />),
     Match.when(TkWidgetKinds.Frame, () => <FrameView {...props} />),
     Match.when(TkWidgetKinds.LabelFrame, () => <FrameView {...props} />),
-    Match.when(TkWidgetKinds.Canvas, () => <TkCanvasView {...props} />),
+    Match.when(TkWidgetKinds.Canvas, () => <TkCanvasView {...props} child={(widget, layout) => <TkWidgetView widget={widget} layout={layout} />} />),
     Match.when(TkWidgetKinds.Scale, () => <ScaleView {...props} />),
     Match.when(TkWidgetKinds.Listbox, () => <ListboxView {...props} />),
     Match.when(TkWidgetKinds.Spinbox, () => <SpinboxView {...props} />),
     Match.when(TkWidgetKinds.Combobox, () => <ComboboxView {...props} />),
     Match.when(TkWidgetKinds.Scrollbar, () => <ScrollbarView {...props} />),
     Match.when(TkWidgetKinds.Menubutton, () => <MenubuttonView {...props} />),
+    Match.whenOr(TkWidgetKinds.Progressbar, TkWidgetKinds.Separator, TkWidgetKinds.Notebook, TkWidgetKinds.Treeview, () => (
+      <ThemedView {...props} child={(widget, layout) => <TkWidgetView widget={widget} layout={layout} />} />
+    )),
     // A Menu is not in the window: the menu bar and the drop-down lists show it (tk-menus.tsx).
     Match.when(TkWidgetKinds.Menu, () => null),
     Match.exhaustive
@@ -263,6 +284,32 @@ const direction = (side: string): CSSProperties["flexDirection"] =>
   side === "bottom" ? "column-reverse" : side === "left" ? "row" : side === "right" ? "row-reverse" : "column"
 
 const fills = (m: TkManager, axis: "x" | "y"): boolean => m.fill === "both" || m.fill === axis
+
+const TextKinds: ReadonlySet<string> = new Set([TkWidgetKinds.Label, TkWidgetKinds.Button, TkWidgetKinds.Checkbutton, TkWidgetKinds.Radiobutton, TkWidgetKinds.Menubutton])
+const FieldKinds: ReadonlySet<string> = new Set([TkWidgetKinds.Entry, TkWidgetKinds.Spinbox, TkWidgetKinds.Combobox])
+const BoxKinds: ReadonlySet<string> = new Set([TkWidgetKinds.Text, TkWidgetKinds.Listbox])
+
+/** The size that a widget asks for (`width`, `height`), as CSS: the least size when it stretches. */
+const requested = (w: TkWidget, axis: "x" | "y"): string | number | undefined => {
+  const size = axis === "x" ? w.width : w.height
+  const unit = (count: number) => (axis === "x" ? `${count}ch` : `${count * LineHeight}em`)
+  if (TextKinds.has(w.kind)) return size > 0 && w.image === 0 ? unit(size) : undefined
+  if (FieldKinds.has(w.kind)) return axis === "x" ? unit(Math.max(1, size)) : undefined
+  if (BoxKinds.has(w.kind)) return unit(Math.max(1, size))
+  if (w.kind === TkWidgetKinds.Canvas) return Math.max(1, size + 2 * (w.highlight + w.bd))
+  return undefined
+}
+
+/**
+ * A widget that `fill` or `sticky` stretches: the stretch wins over the size that it asks for (`height=3`
+ * of a Label), as in Tk, but the widget does not get smaller than it asks.
+ */
+const stretched = (w: TkWidget, axis: "x" | "y"): CSSProperties => {
+  const least = requested(w, axis)
+  return axis === "x"
+    ? { width: "auto", ...(least === undefined ? {} : { minWidth: least }) }
+    : { height: "auto", ...(least === undefined ? {} : { minHeight: least }) }
+}
 
 /**
  * One packed widget: the parcel is a strip along the side of the free space; the widget sits in it by
@@ -283,6 +330,8 @@ function Parcel(props: Readonly<{ widget: TkWidget }>) {
   const layout: CSSProperties = {
     flexGrow: fills(m, "x") ? 1 : 0,
     alignSelf: fills(m, "y") ? "stretch" : undefined,
+    ...(fills(m, "x") ? stretched(props.widget, "x") : {}),
+    ...(fills(m, "y") ? stretched(props.widget, "y") : {}),
     paddingInline: m.ipadx > 0 ? `calc(${m.ipadx}px + ${props.widget.padx}px)` : undefined,
     paddingBlock: m.ipady > 0 ? `calc(${m.ipady}px + ${props.widget.pady}px)` : undefined
   }
@@ -302,7 +351,10 @@ function PackChain(props: Readonly<{ items: ReadonlyArray<TkWidget>; index: numb
   if (item === undefined) return null
   const vertical = isVertical(item.manager.side)
   const later = props.items.slice(props.index + 1)
-  const restGrow = later.filter((w) => w.manager.expand && isVertical(w.manager.side) === vertical).length
+  const laterExpand = later.filter((w) => w.manager.expand && isVertical(w.manager.side) === vertical).length
+  // The free space that nobody takes stays in the cavity of the later widgets, as in Tk: a widget packed to
+  // the right or to the bottom goes to the far side of the window, not next to the previous widget.
+  const restGrow = item.manager.expand ? laterExpand : Math.max(1, laterExpand)
   return (
     <div style={{ display: "flex", flexDirection: direction(item.manager.side), flex: `${props.grow} 1 auto`, alignSelf: "stretch", minWidth: 0, minHeight: 0 }}>
       <Parcel widget={item} />
@@ -346,6 +398,8 @@ function GridBox(props: Readonly<{ items: ReadonlyArray<TkWidget>; columns: Read
           gridRow: `${m.row + 1} / span ${Math.max(1, m.rowspan)}`,
           justifySelf: stickyX(m.sticky),
           alignSelf: stickyY(m.sticky),
+          ...(stickyX(m.sticky) === "stretch" ? stretched(w, "x") : {}),
+          ...(stickyY(m.sticky) === "stretch" ? stretched(w, "y") : {}),
           marginTop: m.pady[0] + w.highlight,
           marginBottom: m.pady[1] + w.highlight,
           marginLeft: m.padx[0] + w.highlight,

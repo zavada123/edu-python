@@ -25,7 +25,9 @@ export const LibraryFiles = {
   TkFiledialog: "tkinter/filedialog.py",
   TkSimpledialog: "tkinter/simpledialog.py",
   TkColorchooser: "tkinter/colorchooser.py",
-  TkScrolledtext: "tkinter/scrolledtext.py"
+  TkScrolledtext: "tkinter/scrolledtext.py",
+  TkThemedWidgets: "tkinter/_themed.py",
+  TkFont: "tkinter/font.py"
 } as const
 export type LibraryFile = (typeof LibraryFiles)[keyof typeof LibraryFiles]
 
@@ -55,5 +57,7 @@ export const readLibrary = (text: (path: LibraryFile) => string): Library => ({
   [LibraryFiles.TkFiledialog]: text(LibraryFiles.TkFiledialog),
   [LibraryFiles.TkSimpledialog]: text(LibraryFiles.TkSimpledialog),
   [LibraryFiles.TkColorchooser]: text(LibraryFiles.TkColorchooser),
-  [LibraryFiles.TkScrolledtext]: text(LibraryFiles.TkScrolledtext)
+  [LibraryFiles.TkScrolledtext]: text(LibraryFiles.TkScrolledtext),
+  [LibraryFiles.TkThemedWidgets]: text(LibraryFiles.TkThemedWidgets),
+  [LibraryFiles.TkFont]: text(LibraryFiles.TkFont)
 })
