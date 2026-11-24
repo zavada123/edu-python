@@ -289,6 +289,13 @@ const tclError = (message: string): string => {
   return "Вікно не може виконати цю команду: перевір параметри віджета."
 }
 
+/** The name of the main window in the code (`root = Tk()`), for the hint about `mainloop()`. */
+const noMainloop = (code: string): string => {
+  const name = /^\s*([A-Za-z_]\w*)\s*=\s*(?:tkinter\.|tk\.)?Tk\(\)/m.exec(code)?.[1]
+  const call = name === undefined ? "mainloop()" : `${name}.mainloop()`
+  return `Програма закінчилась, і вікно закрилось. Допиши останнім рядком \`${call}\`: тоді вікно лишиться відкритим і відповідатиме на клацання.`
+}
+
 const explainMessage = (message: string, code: string): string => {
   const colon = message.indexOf(":")
   const type = colon === -1 ? message : message.slice(0, colon)
@@ -330,6 +337,7 @@ const explainMessage = (message: string, code: string): string => {
         ? "Ця команда tkinter поки не працює на сайті. Запусти програму в IDLE на комп'ютері."
         : "Ця дія поки не працює."
     case "RuntimeError":
+      if (detail.includes("ended without mainloop()")) return noMainloop(code)
       if (detail.includes("input()") && detail.includes("mainloop")) {
         return "У віконній програмі `input()` не працює після `mainloop()`. Щоб отримати дані від користувача, додай поле `Entry` і читай його через `get()`."
       }

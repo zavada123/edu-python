@@ -25,6 +25,7 @@ _app = _core.app
 _MainLoop = _core._MainLoop
 _Ask = _core._Ask
 _send_files = _core.send_files
+_shown_without_mainloop = _core.shown_without_mainloop
 _dispatch = _page.dispatch
 
 

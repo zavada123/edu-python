@@ -163,6 +163,7 @@ export function PythonIde(props: PythonIdeProps) {
               onAnswer={(value, files) => run.session.current?.answer(value, files)}
               downloads={run.view.downloads}
               onDismissDownload={(name) => run.session.current?.dismissDownload(name)}
+              openOnTop
             />
             <Console view={run.view} layout={ConsoleLayouts.Panel} onInput={run.provideInput} />
             {turtle && <TurtleCanvas ops={run.view.ops} runId={run.runId} />}

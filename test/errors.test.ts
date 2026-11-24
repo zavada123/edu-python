@@ -79,6 +79,20 @@ describe("explainError", () => {
     expect(error.explanation).toContain("додай поле `Entry`")
   })
 
+  test("asks for mainloop() with the name of the window of the program", () => {
+    // Arrange
+    const traceback = "RuntimeError: the program ended without mainloop(), so its window closed\n"
+
+    // Act
+    const error = explainError(traceback, "from tkinter import *\nroot = Tk()\nroot.title('a')\n")
+    const unnamed = explainError(traceback, "from tkinter import *\nTk()\n")
+
+    // Assert
+    expect(error.line).toEqual(Option.none())
+    expect(error.explanation).toContain("`root.mainloop()`")
+    expect(unnamed.explanation).toContain("`mainloop()`")
+  })
+
   test("keeps the original message of Python", () => {
     // Act
     const error = explain("print(y)")
