@@ -231,11 +231,73 @@ mainloop()
     expect(r.result._tag === "Failed" && r.result.traceback).toContain("ZeroDivisionError")
   })
 
-  test("finishes a program without mainloop() without a window", () => {
+  test("fails when a program with a window ends without mainloop()", () => {
     // Act
     const r = start("from tkinter import *\nw = Tk()\nprint(w.title())\n")
 
     // Assert
-    expect(r.result).toEqual({ _tag: "Finished" })
+    expect(r.result._tag).toBe("Failed")
+    expect(r.result._tag === "Failed" && r.result.traceback).toContain("RuntimeError: the program ended without mainloop(), so its window closed")
+    expect(outputOf(r.chunks)).toBe("tk\n")
+  })
+
+  test("finishes a program without mainloop() that hid or closed its window", () => {
+    // Act
+    const hidden = start("from tkinter import *\nw = Tk()\nw.withdraw()\n")
+    const closed = start("from tkinter import *\nw = Tk()\nw.destroy()\n")
+
+    // Assert
+    expect(hidden.result).toEqual({ _tag: "Finished" })
+    expect(closed.result).toEqual({ _tag: "Finished" })
+  })
+
+  test("keeps the shown size in winfo_height() until the page shows the new geometry", () => {
+    // Arrange: exercise 6.2 of the textbook, each click makes the window 150 px higher
+    const code = `from tkinter import *
+root = Tk()
+def click(event):
+    root.geometry('400x300')
+    h = root.winfo_height() + 150
+    root.geometry(f'400x{h}')
+    print(h)
+root.bind('<1>', click)
+root.mainloop()
+`
+    const id = sceneOf(start(code).scenes).windows[0]?.id ?? 0
+    const clickWith = (height: number) => {
+      const captured = capture()
+      engine.event({ _tag: "Event", input: press(id), layout: [[id, 0, 0, 400, height]] }, captured.sink)
+      return { window: sceneOf(captured.scenes).windows[0], output: outputOf(captured.chunks) }
+    }
+
+    // Act
+    const first = clickWith(200)
+    const second = clickWith(350)
+
+    // Assert
+    expect(first.output).toBe("350\n")
+    expect(second.output).toBe("500\n")
+    expect(second.window).toMatchObject({ width: 400, height: 500 })
+  })
+
+  test("gives the new geometry to winfo_height() after update()", () => {
+    // Arrange
+    const code = `from tkinter import *
+root = Tk()
+def click(event):
+    root.geometry('400x300')
+    root.update()
+    print(root.winfo_height())
+root.bind('<1>', click)
+root.mainloop()
+`
+    const id = sceneOf(start(code).scenes).windows[0]?.id ?? 0
+    const captured = capture()
+
+    // Act
+    engine.event({ _tag: "Event", input: press(id), layout: [[id, 0, 0, 200, 200]] }, captured.sink)
+
+    // Assert
+    expect(outputOf(captured.chunks)).toBe("300\n")
   })
 })

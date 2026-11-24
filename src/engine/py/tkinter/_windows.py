@@ -114,6 +114,11 @@ class Wm:
             return self._size
         return 1, 1
 
+    def _apply_geometry(self):
+        # `update()`: the size from `geometry` is on the screen now.
+        if self._box is not None and self._size is not None:
+            self._box = [self._box[0], self._box[1], self._size[0], self._size[1]]
+
     def geometry(self, newGeometry=None):
         if newGeometry is None:
             width, height = self._current_size()
@@ -124,8 +129,9 @@ class Wm:
             return ""
         size, position = parse_geometry(newGeometry)
         if size is not None:
+            # As in Tk, the new size comes to the screen later: `winfo_height()` gives the shown size until the
+            # page shows the window again or the program calls `update()`.
             self._size = size
-            self._box = None
         if position is not None:
             x, x_from_end, y, y_from_end = position
             width, height = self._current_size()

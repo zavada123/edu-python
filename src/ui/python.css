@@ -271,3 +271,22 @@
 .epy-tk-downloads__text { flex: 1; min-width: 10rem; overflow-wrap: anywhere; }
 .epy-tk-downloads__button { display: inline-flex; align-items: center; gap: 6px; }
 .epy-tk-downloads__close { display: inline-flex; padding: 4px; border: 0; background: transparent; color: inherit; }
+
+/* The windows on top of the page (`openOnTop`): as windows on a screen, at the size of `geometry()` */
+.epy-tk-area__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 8px; }
+.epy-tk-area__note { margin: 0; font-size: 14px; color: var(--epy-muted-text); }
+.epy-tk-screen {
+  position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column;
+  background: var(--tk-desktop, #1e3a5f); color: var(--epy-text);
+}
+.epy-tk-screen__bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 6px 12px;
+  background: var(--epy-card); border-bottom: 1px solid var(--epy-border);
+}
+.epy-tk-screen__icon { width: 18px; height: 18px; color: var(--epy-muted-text); }
+.epy-tk-screen__caption { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 700; }
+.epy-tk-screen__body { flex: 1; min-height: 0; display: flex; overflow: auto; padding: 24px 16px; }
+.epy-tk-screen__windows { margin: auto; max-width: none; }
+.epy-tk-screen .epy-tk-desktop { max-width: none; overflow: visible; }
+.epy-tk-screen .epy-tk-map { color: #e6edf5; }
+@media (max-width: 640px) { .epy-tk-screen__body { padding: 12px 8px; } .epy-tk-screen__caption { display: none; } .epy-tk-screen__bar { justify-content: flex-end; } }

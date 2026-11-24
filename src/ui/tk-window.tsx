@@ -1,7 +1,7 @@
 import { Match, Option } from "effect"
-import { CircleX, Feather, Info, TriangleAlert, X } from "lucide-react"
+import { AppWindow, CircleX, Feather, Info, Maximize2, Minimize2, PanelRight, TriangleAlert, X } from "lucide-react"
 import { type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
-import { cn } from "./kit.tsx"
+import { Button, ButtonSizes, ButtonVariants, cn } from "./kit.tsx"
 import { KeyKinds, type TkBox, type TkInput } from "../engine/protocol.ts"
 import { collectLayout, keyChar, keyCode, keysym, modifiers, TkIdAttribute } from "../core/tk-input.ts"
 import { type TkAsk, TkBindKinds, type TkDialog, type TkDialogIcon, TkDialogIcons, type TkImage, type TkScene, type TkWindow, waitsFor } from "../core/tk-scene.ts"
@@ -363,6 +363,56 @@ export interface TkWindowsProps {
   /** Files that the program saved: the student can download them. */
   readonly downloads: ReadonlyArray<ProgramFile>
   readonly onDismissDownload: (name: string) => void
+  /**
+   * The windows open on top of the page, as windows on a screen, at the size of `geometry()`; the student puts
+   * them back into the panel. Otherwise they are in the panel, with a button that opens them on top.
+   */
+  readonly openOnTop?: boolean
+}
+
+/** The browser shows `element` on the whole screen, or stops showing it so. */
+const toggleFullscreen = (element: HTMLElement | null): void => {
+  if (element === null) return
+  if (document.fullscreenElement === element) {
+    void document.exitFullscreen().catch(() => undefined)
+    return
+  }
+  void element.requestFullscreen?.().catch(() => undefined)
+}
+
+/** The windows on top of the page: a bar with "На весь екран" and "Повернути в панель", the windows under it. */
+function WindowsOnTop(props: Readonly<{ children: ReactNode; onBack: () => void }>) {
+  const screen = useRef<HTMLDivElement>(null)
+  const [full, setFull] = useState(false)
+
+  useEffect(() => {
+    const change = () => {
+      setFull(screen.current !== null && document.fullscreenElement === screen.current)
+    }
+    document.addEventListener("fullscreenchange", change)
+    return () => {
+      document.removeEventListener("fullscreenchange", change)
+      if (screen.current !== null && document.fullscreenElement === screen.current) void document.exitFullscreen().catch(() => undefined)
+    }
+  }, [])
+
+  return (
+    <div ref={screen} role="dialog" aria-modal="true" aria-label="Вікно програми поверх сторінки" className="epy-tk-screen">
+      <div className="epy-tk-screen__bar">
+        <AppWindow aria-hidden className="epy-tk-screen__icon" />
+        <span className="epy-tk-screen__caption">Вікно програми</span>
+        <Button variant={ButtonVariants.Ghost} size={ButtonSizes.Sm} disabled={false} onClick={() => { toggleFullscreen(screen.current) }}>
+          {full ? <Minimize2 aria-hidden /> : <Maximize2 aria-hidden />} {full ? "Вийти з повного екрана" : "На весь екран"}
+        </Button>
+        <Button variant={ButtonVariants.Ghost} size={ButtonSizes.Sm} disabled={false} onClick={props.onBack}>
+          <PanelRight aria-hidden /> Повернути в панель
+        </Button>
+      </div>
+      <div className="epy-tk-screen__body">
+        <div className="epy-tk-screen__windows">{props.children}</div>
+      </div>
+    </div>
+  )
 }
 
 /** The windows of the program and its message windows. The parent gives a new `key` for each run. */
@@ -373,6 +423,7 @@ export function TkWindows(props: TkWindowsProps) {
   const announced = useRef(new Set<number>())
   const focusRev = useRef(0)
   const { onInput } = props
+  const [onTop, setOnTop] = useState(props.openOnTop === true)
 
   const send = useCallback((input: TkInput): void => {
     if (root !== null) onInput(input, collectLayout(root))
@@ -408,29 +459,58 @@ export function TkWindows(props: TkWindowsProps) {
   const dialog = props.dialogs[0]
   if (Option.isNone(props.scene) && dialog === undefined && Option.isNone(props.ask) && props.downloads.length === 0) return null
 
-  return (
-    <section ref={setRoot} className="epy-tk-area" aria-label="Вікна програми">
-      <p className="epy-caption">Вікно програми</p>
-      {Option.match(props.scene, {
-        onNone: () => null,
-        onSome: (scene) => {
-          const value: TkContextValue = { scene, images: props.images, active: props.active, send, press }
-          return (
-            <TkContext.Provider value={Option.some(value)}>
-              <div className={cn("epy-tk-windows", !props.active && "epy-tk-windows--idle")}>
-                {visible.length > 0 && <Desktop windows={visible} />}
-              </div>
-              {props.active && <PopupMenus root={root} />}
-            </TkContext.Provider>
-          )
-        }
-      })}
-      <Downloads files={props.downloads} onDismiss={props.onDismissDownload} />
+  const windows = Option.match(props.scene, {
+    onNone: () => null,
+    onSome: (scene) => {
+      const value: TkContextValue = { scene, images: props.images, active: props.active, send, press }
+      return (
+        <TkContext.Provider value={Option.some(value)}>
+          <div className={cn("epy-tk-windows", !props.active && "epy-tk-windows--idle")}>
+            {visible.length > 0 && <Desktop windows={visible} />}
+          </div>
+          {props.active && <PopupMenus root={root} />}
+        </TkContext.Provider>
+      )
+    }
+  })
+  const dialogs = (
+    <>
       {dialog !== undefined && <MessageDialog dialog={dialog} onClose={props.onCloseDialog} />}
       {dialog === undefined && Option.match(props.ask, {
         onNone: () => null,
         onSome: (ask) => <AskDialog key={JSON.stringify(ask)} ask={ask} onAnswer={props.onAnswer} />
       })}
+    </>
+  )
+  // The windows go on top only while the program waits for the student: after the run the panel shows them
+  // beside the output and the error.
+  const top = onTop && props.active && visible.length > 0
+
+  return (
+    <section ref={setRoot} className="epy-tk-area" aria-label="Вікна програми">
+      <div className="epy-tk-area__head">
+        <p className="epy-caption">Вікно програми</p>
+        {!top && props.active && visible.length > 0 && (
+          <Button variant={ButtonVariants.Ghost} size={ButtonSizes.Sm} disabled={false} onClick={() => { setOnTop(true) }}>
+            <AppWindow aria-hidden /> Відкрити поверх сторінки
+          </Button>
+        )}
+      </div>
+      {top ? (
+        <>
+          <p className="epy-tk-area__note">Вікно відкрите поверх сторінки.</p>
+          <WindowsOnTop onBack={() => { setOnTop(false) }}>
+            {windows}
+            {dialogs}
+          </WindowsOnTop>
+        </>
+      ) : (
+        <>
+          {windows}
+          {dialogs}
+        </>
+      )}
+      <Downloads files={props.downloads} onDismiss={props.onDismissDownload} />
     </section>
   )
 }

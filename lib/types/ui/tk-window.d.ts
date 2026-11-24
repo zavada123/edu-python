@@ -18,6 +18,11 @@ export interface TkWindowsProps {
     /** Files that the program saved: the student can download them. */
     readonly downloads: ReadonlyArray<ProgramFile>;
     readonly onDismissDownload: (name: string) => void;
+    /**
+     * The windows open on top of the page, as windows on a screen, at the size of `geometry()`; the student puts
+     * them back into the panel. Otherwise they are in the panel, with a button that opens them on top.
+     */
+    readonly openOnTop?: boolean;
 }
 /** The windows of the program and its message windows. The parent gives a new `key` for each run. */
 export declare function TkWindows(props: TkWindowsProps): import("react").JSX.Element | null;

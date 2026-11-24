@@ -395,9 +395,11 @@ class Misc:
         _close()
 
     def update(self):
+        _apply_geometry()
         flush()
 
     def update_idletasks(self):
+        _apply_geometry()
         flush()
 
     def wait_window(self, window=None):
@@ -696,6 +698,19 @@ class Misc:
         for kid in self.winfo_children():
             if kid._manager is not None:
                 kid._shown()
+
+
+def _apply_geometry():
+    for widget in app.widgets:
+        if widget._kind == "Window" and widget._alive:
+            widget._apply_geometry()
+
+
+def shown_without_mainloop():
+    """The program ended with a window on the screen and without `mainloop()`: Tk closes the window."""
+    if app.waiting or app.closed or app.root is None or not app.root._alive:
+        return False
+    return any(w._kind == "Window" and w._alive and w._visible for w in app.widgets)
 
 
 def mainloop(n=0):

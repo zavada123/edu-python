@@ -100,6 +100,10 @@ def _mriya_run(source, seed):
     try:
         exec(compile(source, "main.py", "exec"), scope)
         _tk_files()
+        tk = _tkinter()
+        if tk is not None and tk._shown_without_mainloop():
+            # IDLE keeps such a window open, Python does not: the student adds `mainloop()` (errors.ts).
+            return "RuntimeError: the program ended without mainloop(), so its window closed\n"
         return ""
     except _NeedInput:
         # The engine knows about it: `next_input` returned None.
