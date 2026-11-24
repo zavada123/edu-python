@@ -230,7 +230,11 @@ const samePlace = (a: Place, b: Place): boolean => a[0] === b[0] && a[1] === b[1
  * The windows of the program where the program put them: one beside another as on the screen. The student
  * drags a window by its title; the program gets <Configure> with the new place.
  */
-function Desktop(props: Readonly<{ windows: ReadonlyArray<TkWindow> }>) {
+/**
+ * `screen`: the area is the 1920 × 1080 screen of the program, and each window stands at its own `+x+y`
+ * (the windows on top of the page). Otherwise the windows stand from the corner of the area.
+ */
+function Desktop(props: Readonly<{ windows: ReadonlyArray<TkWindow>; screen: boolean }>) {
   const tk = useTk()
   const [dragged, setDragged] = useState<ReadonlyMap<number, Dragged>>(new Map())
   const [raised, setRaised] = useState<Option.Option<{ readonly id: number; readonly topZ: number }>>(Option.none())
@@ -249,7 +253,7 @@ function Desktop(props: Readonly<{ windows: ReadonlyArray<TkWindow> }>) {
   const least: Place = [Math.min(...placed.map(([, p]) => p[0])), Math.min(...placed.map(([, p]) => p[1]))]
   const corner = Option.match(origin.current, { onNone: () => least, onSome: (o): Place => [Math.min(o[0], least[0]), Math.min(o[1], least[1])] })
   origin.current = Option.some(corner)
-  const [left, top] = corner
+  const [left, top] = props.screen ? [0, 0] : corner
   const topZ = Math.max(...props.windows.map((w) => w.z))
   const order = props.windows.toSorted((a, b) => a.z - b.z).map((w) => w.id)
   Option.map(raised, (r) => {
@@ -283,7 +287,11 @@ function Desktop(props: Readonly<{ windows: ReadonlyArray<TkWindow> }>) {
   return (
     <>
       <div className="epy-tk-desktop">
-        <div ref={stage} className="epy-tk-stage">
+        <div
+          ref={stage}
+          className={cn("epy-tk-stage", props.screen && "epy-tk-stage--screen")}
+          style={props.screen ? { width: Screen.width, height: Screen.height } : undefined}
+        >
           {placed.map(([w, place]) => (
               <WindowFrame
                 key={w.id}
@@ -302,7 +310,7 @@ function Desktop(props: Readonly<{ windows: ReadonlyArray<TkWindow> }>) {
           ))}
         </div>
       </div>
-      {placed.some(([w]) => w.placed) && <ScreenMap windows={placed} sizes={sizes} />}
+      {!props.screen && placed.some(([w]) => w.placed) && <ScreenMap windows={placed} sizes={sizes} />}
     </>
   )
 }
@@ -381,7 +389,7 @@ const toggleFullscreen = (element: HTMLElement | null): void => {
 }
 
 /** The windows on top of the page: a bar with "На весь екран" and "Повернути в панель", the windows under it. */
-function WindowsOnTop(props: Readonly<{ children: ReactNode; onBack: () => void }>) {
+function WindowsOnTop(props: Readonly<{ children: ReactNode; screen: boolean; onBack: () => void }>) {
   const screen = useRef<HTMLDivElement>(null)
   const [full, setFull] = useState(false)
 
@@ -409,7 +417,7 @@ function WindowsOnTop(props: Readonly<{ children: ReactNode; onBack: () => void 
         </Button>
       </div>
       <div className="epy-tk-screen__body">
-        <div className="epy-tk-screen__windows">{props.children}</div>
+        <div className={cn("epy-tk-screen__windows", props.screen && "epy-tk-screen__windows--screen")}>{props.children}</div>
       </div>
     </div>
   )
@@ -459,6 +467,12 @@ export function TkWindows(props: TkWindowsProps) {
   const dialog = props.dialogs[0]
   if (Option.isNone(props.scene) && dialog === undefined && Option.isNone(props.ask) && props.downloads.length === 0) return null
 
+  // The windows go on top only while the program waits for the student: after the run the panel shows them
+  // beside the output and the error.
+  const top = onTop && props.active && visible.length > 0
+  // On top, windows that `geometry("+x+y")` placed stand at their place on the screen of the program.
+  const screen = top && visible.some((w) => w.placed)
+
   const windows = Option.match(props.scene, {
     onNone: () => null,
     onSome: (scene) => {
@@ -466,7 +480,7 @@ export function TkWindows(props: TkWindowsProps) {
       return (
         <TkContext.Provider value={Option.some(value)}>
           <div className={cn("epy-tk-windows", !props.active && "epy-tk-windows--idle")}>
-            {visible.length > 0 && <Desktop windows={visible} />}
+            {visible.length > 0 && <Desktop key={screen ? "screen" : "area"} windows={visible} screen={screen} />}
           </div>
           {props.active && <PopupMenus root={root} />}
         </TkContext.Provider>
@@ -482,10 +496,6 @@ export function TkWindows(props: TkWindowsProps) {
       })}
     </>
   )
-  // The windows go on top only while the program waits for the student: after the run the panel shows them
-  // beside the output and the error.
-  const top = onTop && props.active && visible.length > 0
-
   return (
     <section ref={setRoot} className="epy-tk-area" aria-label="Вікна програми">
       <div className="epy-tk-area__head">
@@ -499,7 +509,7 @@ export function TkWindows(props: TkWindowsProps) {
       {top ? (
         <>
           <p className="epy-tk-area__note">Вікно відкрите поверх сторінки.</p>
-          <WindowsOnTop onBack={() => { setOnTop(false) }}>
+          <WindowsOnTop screen={screen} onBack={() => { setOnTop(false) }}>
             {windows}
             {dialogs}
           </WindowsOnTop>

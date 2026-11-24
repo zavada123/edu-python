@@ -290,3 +290,7 @@
 .epy-tk-screen .epy-tk-desktop { max-width: none; overflow: visible; }
 .epy-tk-screen .epy-tk-map { color: #e6edf5; }
 @media (max-width: 640px) { .epy-tk-screen__body { padding: 12px 8px; } .epy-tk-screen__caption { display: none; } .epy-tk-screen__bar { justify-content: flex-end; } }
+/* On top, with `geometry("+x+y")`: the area is the screen of the program, a window stands at its place */
+.epy-tk-screen__windows--screen { margin: 0; }
+.epy-tk-screen .epy-tk-desktop { padding: 0; }
+.epy-tk-stage--screen { position: relative; box-sizing: border-box; outline: 1px dashed rgb(255 255 255 / 0.35); background: rgb(255 255 255 / 0.04); }
