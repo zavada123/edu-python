@@ -6,59 +6,19 @@
  */
 import type { SyntaxNode } from "@lezer/common"
 import {
-  analyze, BindingKinds, type Binding, type CodeModel, enclosingFunction, type FunctionInfo, hasAncestor, ParamKinds, resolve,
+  analyze, BindingKinds, type Binding, enclosingFunction, type FunctionInfo, hasAncestor, ParamKinds, resolve,
   type Scope, ScopeKinds, type Use, visibleBindings, visibleStarImports
 } from "./code-scope.ts"
-import { builtinDocs, isBuiltin, isKnownModule, splitParams, type Typer, typer, TypeKinds, type ValueType } from "./python-names.ts"
-import { apiModules } from "./python-api.ts"
+import { builtinDocs, isBuiltin, isKnownModule, splitParams, typer, TypeKinds, type ValueType } from "./python-names.ts"
+import { apiClasses, apiModules } from "./python-api.ts"
+import { checkDefinitions, checkImport, checkMaybeUnbound, checkMember, checkNoneResult, checkTextPlusNumber } from "./code-check-more.ts"
+import {
+  type CallArgs, CheckSeverities, type CodeWarning, type Context, fromInput, inputMessage, MaxWarnings, ownFunction, readArgs,
+  scopeOf, similarName, valuesWord
+} from "./check-kit.ts"
 
-export const CheckSeverities = { Error: "error", Warning: "warning" } as const
-export type CheckSeverity = (typeof CheckSeverities)[keyof typeof CheckSeverities]
+export { CheckSeverities, type CheckSeverity, type CodeWarning, valuesWord } from "./check-kit.ts"
 
-export interface CodeWarning {
-  readonly from: number
-  readonly to: number
-  readonly severity: CheckSeverity
-  readonly message: string
-}
-
-/** At most this many marks: the student fixes the first ones and sees the next. */
-const MaxWarnings = 12
-
-/** `1 значення`, `5 значень`. */
-export const valuesWord = (count: number): string => {
-  const tens = count % 100
-  const ones = count % 10
-  if (tens >= 11 && tens <= 14) return `${count} значень`
-  if (ones === 1) return `${count} значення`
-  if (ones >= 2 && ones <= 4) return `${count} значення`
-  return `${count} значень`
-}
-
-const levenshtein = (a: string, b: string): number => {
-  let previous = Array.from({ length: b.length + 1 }, (_, i) => i)
-  for (let i = 1; i <= a.length; i++) {
-    const current = [i]
-    for (let j = 1; j <= b.length; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1
-      current.push(Math.min((previous[j] ?? 0) + 1, (current[j - 1] ?? 0) + 1, (previous[j - 1] ?? 0) + cost))
-    }
-    previous = current
-  }
-  return previous[b.length] ?? 0
-}
-
-/** A known name that differs only in letter case or in 1–2 letters. */
-const similarName = (name: string, candidates: ReadonlyArray<string>): string | undefined => {
-  const sameCase = candidates.find((c) => c !== name && c.toLowerCase() === name.toLowerCase())
-  if (sameCase !== undefined) return sameCase
-  const limit = name.length <= 3 ? 0 : name.length <= 5 ? 1 : 2
-  return candidates
-    .filter((c) => c !== name && Math.abs(c.length - name.length) <= limit)
-    .map((c) => ({ c, d: levenshtein(name.toLowerCase(), c.toLowerCase()) }))
-    .filter((x) => x.d <= limit)
-    .sort((a, b) => a.d - b.d)[0]?.c
-}
 
 const LoopNodes: ReadonlySet<string> = new Set(["ForStatement", "WhileStatement"])
 /** Builtins that give a value: without brackets the variable gets the function. */
@@ -69,13 +29,6 @@ const ResultFunctions: ReadonlySet<string> = new Set(["int", "float", "str", "ro
 const ButtonWidgets: ReadonlySet<string> = new Set(["Button", "Checkbutton", "Radiobutton"])
 const StrNewValue: ReadonlySet<string> = new Set(["upper", "lower", "capitalize", "title", "strip", "lstrip", "rstrip", "replace"])
 
-interface Context {
-  readonly model: CodeModel
-  readonly types: Typer
-  readonly text: (node: SyntaxNode) => string
-  readonly line: (pos: number) => number
-  readonly add: (from: number, to: number, severity: CheckSeverity, message: string) => void
-}
 
 /** Names that can be read at a use: for "maybe you meant". */
 const candidatesAt = (scope: Scope): ReadonlyArray<string> => {
@@ -101,7 +54,9 @@ const checkNames = (ctx: Context): void => {
       ctx.add(use.from, use.to, CheckSeverities.Error, undefinedMessage(use, fn))
       continue
     }
+    const before = ctx.warningsCount()
     checkOrder(ctx, use, found.scope, found.bindings, reported)
+    if (ctx.warningsCount() === before) checkMaybeUnbound(ctx, use, reported)
   }
 }
 
@@ -150,53 +105,6 @@ const checkOrder = (ctx: Context, use: Use, scope: Scope, bindings: ReadonlyArra
   ctx.add(use.from, use.to, CheckSeverities.Error, `Змінна \`${use.name}\` отримує значення нижче, у рядку ${line}, а тут її вже читають. Python виконує програму згори вниз: присвой значення раніше.`)
 }
 
-interface CallArgs {
-  readonly positional: number
-  readonly keywords: ReadonlyArray<{ readonly name: string; readonly node: SyntaxNode }>
-  /** `*args` or `**kwargs` in the call: the count is not known. */
-  readonly spread: boolean
-  readonly values: ReadonlyArray<SyntaxNode>
-  readonly keywordValues: ReadonlyMap<string, SyntaxNode>
-}
-
-const readArgs = (ctx: Context, list: SyntaxNode): CallArgs => {
-  const parts: Array<SyntaxNode> = []
-  for (let child = list.firstChild; child !== null; child = child.nextSibling) parts.push(child)
-  let positional = 0
-  let spread = false
-  const keywords: Array<{ name: string; node: SyntaxNode }> = []
-  const values: Array<SyntaxNode> = []
-  const keywordValues = new Map<string, SyntaxNode>()
-  let i = 0
-  while (i < parts.length) {
-    const part = parts[i]
-    if (part === undefined) break
-    if (part.name === "(" || part.name === ")" || part.name === ",") {
-      i += 1
-      continue
-    }
-    if (part.name === "*" || part.name === "**") {
-      spread = true
-      i += 2
-      continue
-    }
-    if (part.name === "VariableName" && parts[i + 1]?.name === "AssignOp") {
-      const value = parts[i + 2]
-      keywords.push({ name: ctx.text(part), node: part })
-      if (value !== undefined) keywordValues.set(ctx.text(part), value)
-      i += 3
-      continue
-    }
-    if (part.name === "for") {
-      // `f(x for x in y)`: one generator.
-      return { positional: 1, keywords, spread: true, values, keywordValues }
-    }
-    positional += 1
-    values.push(part)
-    i += 1
-  }
-  return { positional, keywords, spread, values, keywordValues }
-}
 
 interface Signature {
   readonly name: string
@@ -263,32 +171,13 @@ const argsMessage = (sig: Signature, args: CallArgs): string | undefined => {
   return `Функція \`${sig.name}\` чекає ${valuesWord(need)}${where}, а тут їй передають ${valuesWord(args.positional + args.keywords.length)}. Бракує значення для ${names}.`
 }
 
-/** The one `def` of a name: not changed by other assignments, not decorated. */
-const ownFunction = (ctx: Context, node: SyntaxNode, scope: Scope): FunctionInfo | undefined => {
-  if (node.name !== "VariableName") return undefined
-  const found = resolve(ctx.text(node), scope, ctx.model.module)
-  if (found === null || found.bindings.length !== 1) return undefined
-  const fn = found.bindings[0]?.fn
-  return fn === undefined || fn.decorated || fn.method ? undefined : fn
-}
-
-/** The scope of a node: the innermost scope that contains it. */
-const scopeOf = (model: CodeModel, pos: number): Scope => {
-  let scope = model.module
-  for (;;) {
-    const inner = scope.children.find((child) => child.from <= pos && pos < child.to && !(child.kind === ScopeKinds.Function && pos < (child.fn?.node.getChild("Body")?.from ?? child.from)))
-    if (inner === undefined) return scope
-    scope = inner
-  }
-}
 
 const signatureOf = (ctx: Context, callee: SyntaxNode, scope: Scope): Signature | undefined => {
   const own = ownFunction(ctx, callee, scope)
   if (own !== undefined) return ownSignature(own)
   const type: ValueType = ctx.types.typeOf(callee, scope)
   if ((type.kind === TypeKinds.ApiFunction || type.kind === TypeKinds.ApiClass) && type.params !== undefined) {
-    // Methods of objects are left out: their parameters in tkinter differ between versions.
-    if (type.kind === TypeKinds.ApiFunction && !isKnownModule(type.path)) return undefined
+    if (type.kind === TypeKinds.ApiFunction && !isKnownModule(type.path) && !(type.path in apiClasses)) return undefined
     return apiSignature(type.name, type.params)
   }
   return undefined
@@ -308,7 +197,9 @@ const checkCall = (ctx: Context, call: SyntaxNode, scope: Scope): void => {
   const sig = signatureOf(ctx, callee, scope)
   if (sig !== undefined) {
     const message = argsMessage(sig, args)
-    if (message !== undefined) ctx.add(callee.from, list.to, CheckSeverities.Error, message)
+    // `root.geometry(400, 300)`: the size is one string.
+    const hint = sig.name === "geometry" && args.positional > 1 ? " Розмір пишуть одним рядком: `root.geometry('400x300')`." : ""
+    if (message !== undefined) ctx.add(callee.from, list.to, CheckSeverities.Error, message + hint)
   }
   checkTkCallbacks(ctx, callee, args, scope)
   checkStrArgs(ctx, calleeName, builtin !== undefined, args, scope)
@@ -364,20 +255,6 @@ const checkTkCallbacks = (ctx: Context, callee: SyntaxNode, args: CallArgs, scop
   }
 }
 
-/** The variable has text from `input()` in every assignment. */
-const fromInput = (ctx: Context, node: SyntaxNode, scope: Scope): boolean => {
-  const found = resolve(ctx.text(node), scope, ctx.model.module)
-  if (found === null) return false
-  return found.bindings.every((b) => {
-    const value = b.value
-    if (value?.name !== "CallExpression") return false
-    const callee = value.firstChild
-    return callee?.name === "VariableName" && ctx.text(callee) === "input"
-  })
-}
-
-const inputMessage = (name: string): string =>
-  `У \`${name}\` — текст, який ввели в \`input()\`, а не число. Щоб рахувати, перетвори його: \`${name} = int(input(...))\` або \`float(input(...))\`.`
 
 /** `a - 1`, `a + 1`, `a > 5` where `a` is text from `input()`. */
 const checkArithmetic = (ctx: Context, node: SyntaxNode, scope: Scope): void => {
@@ -449,8 +326,14 @@ const checkLostResult = (ctx: Context, node: SyntaxNode, scope: Scope): void => 
 const walk = (ctx: Context): void => {
   const visit = (node: SyntaxNode): void => {
     const scope = (): Scope => scopeOf(ctx.model, node.from)
-    if (node.name === "CallExpression") checkCall(ctx, node, scope())
-    else if (node.name === "BinaryExpression") checkArithmetic(ctx, node, scope())
+    if (node.name === "CallExpression") {
+      checkCall(ctx, node, scope())
+      checkNoneResult(ctx, node, scope())
+    } else if (node.name === "BinaryExpression") {
+      checkArithmetic(ctx, node, scope())
+      checkTextPlusNumber(ctx, node, scope())
+    } else if (node.name === "MemberExpression") checkMember(ctx, node, scope())
+    else if (node.name === "ImportStatement") checkImport(ctx, node)
     else if (node.name === "AssignStatement") checkNoBrackets(ctx, node, scope())
     else if (node.name === "ExpressionStatement") {
       checkNoBrackets(ctx, node, scope())
@@ -477,6 +360,7 @@ export const checkCode = (code: string): ReadonlyArray<CodeWarning> => {
       while (line + 1 < lineStarts.length && (lineStarts[line + 1] ?? Infinity) <= pos) line += 1
       return line + 1
     },
+    warningsCount: () => warnings.length,
     add: (from, to, severity, message) => {
       if (warnings.some((w) => w.from === from && w.to === to)) return
       warnings.push({ from, to, severity, message })
@@ -484,5 +368,6 @@ export const checkCode = (code: string): ReadonlyArray<CodeWarning> => {
   }
   if (!model.unsupported && !/\b(exec|eval|globals|locals|setattr|__import__)\s*\(/.test(code)) checkNames(ctx)
   walk(ctx)
+  checkDefinitions(ctx, model.module)
   return warnings.sort((a, b) => a.from - b.from).slice(0, MaxWarnings)
 }

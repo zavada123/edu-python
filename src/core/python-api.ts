@@ -6,6 +6,9 @@
  */
 export type ApiItem = readonly [kind: string, cls: string, params?: string]
 
+/** Modules that `import` finds in the engine. */
+export const apiImportable: ReadonlyArray<string> = ["_asyncio","abc","array","asyncio","base64","binascii","builtins","cmath","collections","copy","datetime","deflate","errno","fnmatch","framebuf","functools","gc","gzip","hashlib","heapq","hmac","html","inspect","io","itertools","js","jsffi","json","locale","logging","math","micropython","operator","os","pathlib","platform","random","re","select","stat","string","struct","sys","tarfile","time","tkinter","turtle","types","uctypes","unittest","uu","vfs","weakref","zlib"]
+
 export const apiBuiltins: ReadonlyArray<string> = ["ArithmeticError","AssertionError","AttributeError","BaseException","EOFError","Ellipsis","Exception","GeneratorExit","ImportError","IndentationError","IndexError","KeyError","KeyboardInterrupt","LookupError","MemoryError","NameError","NotImplemented","NotImplementedError","OSError","OverflowError","RuntimeError","StopAsyncIteration","StopIteration","SyntaxError","SystemExit","TypeError","UnicodeError","ValueError","ZeroDivisionError","abs","all","any","bin","bool","bytearray","bytes","callable","chr","classmethod","compile","complex","delattr","dict","dir","divmod","enumerate","eval","exec","execfile","filter","float","frozenset","getattr","globals","hasattr","hash","help","hex","id","input","int","isinstance","issubclass","iter","len","list","locals","map","max","memoryview","min","next","object","oct","open","ord","pow","print","property","range","repr","reversed","round","set","setattr","slice","sorted","staticmethod","str","sum","super","tuple","type","zip"]
 
 export const apiModules: Readonly<Record<string, Readonly<Record<string, ApiItem>>>> = {

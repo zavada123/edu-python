@@ -5,6 +5,8 @@
  * of a class in `apiClasses`; `params` are the parameters when the function is written in Python.
  */
 export type ApiItem = readonly [kind: string, cls: string, params?: string];
+/** Modules that `import` finds in the engine. */
+export declare const apiImportable: ReadonlyArray<string>;
 export declare const apiBuiltins: ReadonlyArray<string>;
 export declare const apiModules: Readonly<Record<string, Readonly<Record<string, ApiItem>>>>;
 export declare const apiClasses: Readonly<Record<string, {
