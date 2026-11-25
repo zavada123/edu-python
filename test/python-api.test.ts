@@ -2,7 +2,7 @@ import { writeFileSync } from "node:fs"
 import { beforeAll, describe, expect, test } from "vitest"
 import type { Engine } from "../src/engine/engine.ts"
 import { loadNodeEngine } from "../src/engine/sources.ts"
-import { apiBuiltins, apiClasses, apiModules } from "../src/core/python-api.ts"
+import { apiBuiltins, apiClasses, apiImportable, apiModules } from "../src/core/python-api.ts"
 import { apiFileText, buildApi } from "./support/python-api-source.ts"
 
 // The names that the editor suggests and checks come from the engine. When `turtle.py` or `tkinter` change,
@@ -21,6 +21,6 @@ describe("python-api.ts", () => {
     if (process.env.UPDATE_API === "1") writeFileSync(new URL("../src/core/python-api.ts", import.meta.url), apiFileText(api))
 
     // Assert
-    expect({ builtins: apiBuiltins, modules: apiModules, classes: apiClasses }).toEqual(api)
+    expect({ importable: apiImportable, builtins: apiBuiltins, modules: apiModules, classes: apiClasses }).toEqual(api)
   })
 })

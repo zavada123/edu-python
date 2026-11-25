@@ -122,6 +122,7 @@ const cleanParams = (params: string, method: boolean): string => {
 }
 
 export interface GeneratedApi {
+  readonly importable: ReadonlyArray<string>
   readonly builtins: ReadonlyArray<string>
   readonly modules: Record<string, Record<string, ReadonlyArray<string>>>
   readonly classes: Record<string, { readonly bases: ReadonlyArray<string>; readonly members: Record<string, ReadonlyArray<string>> }>
@@ -179,7 +180,12 @@ export const buildApi = (engine: Engine): GeneratedApi => {
   }
   const mapItems = (items: Record<string, readonly [Kind, string]>): Record<string, ReadonlyArray<string>> =>
     Object.fromEntries(Object.entries(items).filter(([name]) => name !== "__init__").sort(([a], [b]) => a.localeCompare(b)).map(([name, it]) => [name, item(it)]))
+  let help = ""
+  engine.run({ _tag: "Run", code: "help('modules')", inputs: [], seed: 1 }, { ...silentSink, chunk: (c) => { help += c.text } })
+  const library = Object.keys(pythonLibrary).map((file) => file.split("/")[0]?.replace(/\.py$/, "") ?? file)
+  const importable = new Set([...library, ...(help.replace("Plus any modules on the filesystem", "").match(/\S+/g) ?? []).map((word) => word.split("/")[0] ?? word)].filter((name) => /^[a-z_][a-z0-9_]*$/.test(name) && !name.startsWith("__")))
   return {
+    importable: [...importable].sort(),
     builtins: [...raw.builtins].sort(),
     modules: Object.fromEntries(Object.entries(raw.modules).map(([name, items]) => [name, mapItems(items)])),
     classes: Object.fromEntries(Object.entries(raw.classes).sort(([a], [b]) => a.localeCompare(b)).map(([key, cls]) => [key, { bases: cls.bases, members: mapItems(cls.members) }]))
@@ -197,6 +203,9 @@ export const apiFileText = (api: GeneratedApi): string => `/**
  * of a class in \`apiClasses\`; \`params\` are the parameters when the function is written in Python.
  */
 export type ApiItem = readonly [kind: string, cls: string, params?: string]
+
+/** Modules that \`import\` finds in the engine. */
+export const apiImportable: ReadonlyArray<string> = ${JSON.stringify(api.importable)}
 
 export const apiBuiltins: ReadonlyArray<string> = ${JSON.stringify(api.builtins)}
 
