@@ -1,4 +1,6 @@
 import { Option } from "effect";
+import type { SyntaxProblem } from "../core/syntax-check.ts";
+export type SyntaxCheck = (code: string) => Promise<Option.Option<SyntaxProblem>>;
 /** `Grow`: the editor grows with the code (tasks, topics). `Fill`: it fills the parent and scrolls (Online IDE). */
 export declare const EditorHeights: {
     readonly Grow: "grow";
@@ -20,4 +22,6 @@ export declare function CodeEditor(props: Readonly<{
     onChange: (code: string) => void;
     onRun: () => void;
     onReady: (handle: EditorHandle) => void;
+    /** Checks the code while the student types; without it the editor marks only the error line of a run. */
+    check?: SyntaxCheck;
 }>): import("react").JSX.Element;

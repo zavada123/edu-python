@@ -123,6 +123,17 @@ def _mriya_run(source, seed):
         return _traceback(error)
 
 
+def _mriya_check(source):
+    # The editor marks syntax errors while the student types: the code is compiled, not run.
+    try:
+        compile(source, "main.py", "exec")
+        return ""
+    except SyntaxError as error:
+        return _traceback(error)
+    except BaseException:
+        return ""
+
+
 def _mriya_event(source):
     # One user action in a window (tk-input.ts). The scope of the program is kept by its functions.
     tk = _tkinter()

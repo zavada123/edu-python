@@ -93,6 +93,27 @@ describe("explainError", () => {
     expect(unnamed.explanation).toContain("`mainloop()`")
   })
 
+  test("finds a missing comma between two values in brackets", () => {
+    // Act
+    const error = explain("from tkinter import *\nvikno = Tk()\ndef click67(event):\n    pass\nvikno.bind('<1>' click67)\n")
+    const numbers = explain("print(1 2)\n")
+
+    // Assert
+    expect(error.line).toEqual(Option.some(5))
+    expect(error.explanation).toContain("Між `'<1>'` і `click67` бракує коми")
+    expect(numbers.explanation).toContain("Між `1` і `2` бракує коми")
+  })
+
+  test("does not ask for a comma between words that join values", () => {
+    // Act
+    const error = explain("print(1 if True else 2\n")
+    const fString = explain("h = 5\nprint(f'{h}' if h else 'x' +)\n")
+
+    // Assert
+    expect(error.explanation).not.toContain("коми")
+    expect(fString.explanation).not.toContain("коми")
+  })
+
   test("keeps the original message of Python", () => {
     // Act
     const error = explain("print(y)")

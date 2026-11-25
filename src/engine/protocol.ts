@@ -162,7 +162,15 @@ export interface RunRequest extends Answers {
   readonly seed: number
 }
 
-export type WorkerRequest = RunRequest | EventRequest
+/** Compiles the code without running it, for the marks of the editor while the student types. */
+export interface CheckRequest {
+  readonly _tag: "Check"
+  /** The answer carries it back: the page uses only the answer to its last check. */
+  readonly id: number
+  readonly code: string
+}
+
+export type WorkerRequest = RunRequest | EventRequest | CheckRequest
 
 export type WorkerMessage =
   /** The engine is loaded and the program starts now: the time limit counts from this message. */
@@ -198,6 +206,8 @@ export type WorkerMessage =
   | { readonly _tag: "Failed"; readonly traceback: string }
   | { readonly _tag: "OutputLimit" }
   | { readonly _tag: "LoadFailed"; readonly message: string }
+  /** The answer to `Check`: the traceback of the SyntaxError, or "" when the code compiles. */
+  | { readonly _tag: "Checked"; readonly id: number; readonly traceback: string }
 
 /** Console limit: a loop that prints forever must not use all memory of the phone. */
 export const MaxOutputChars = 200_000

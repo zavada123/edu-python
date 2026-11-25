@@ -19,6 +19,7 @@ afterEach(() => {
 const engineWorker = (log: Array<WorkerRequest>): WorkerFactory => (onMessage) => ({
   post: (request) => {
     log.push(request)
+    if (request._tag === "Check") return
     setTimeout(() => {
       onMessage(request._tag === "Run" ? { _tag: "Started" } : { _tag: "Handling" })
       const progress: Array<WorkerMessage> = []

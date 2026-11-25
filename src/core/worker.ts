@@ -156,6 +156,8 @@ export const startPythonWorker = (wasmUrl: string): void => {
           asking = false
           handle(ready, request)
           return releaseTimers(ready)
+        case "Check":
+          return post({ _tag: "Checked", id: request.id, traceback: ready.check(request.code) })
       }
     },
     (error: unknown) => {

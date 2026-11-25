@@ -4,7 +4,8 @@ import { Alert, AlertTones, cn } from "./kit.tsx"
 import { ChunkKinds } from "../engine/protocol.ts"
 import { createRunSession, idleView, type RunSession, type RunStatus, type RunView, type StopReason, StopReasons, type WorkerFactory } from "../core/session.ts"
 import { CodeText } from "./code-text.tsx"
-import type { EditorHandle } from "./code-editor.tsx"
+import type { EditorHandle, SyntaxCheck } from "./code-editor.tsx"
+import { createSyntaxChecker, type SyntaxChecker } from "../core/syntax-check.ts"
 
 // Parts of a Python run that the runner (`python-runner.tsx`) and the Online IDE (`python-ide.tsx`) share:
 // the run session, the console with `input()`, the error with an explanation and the symbol bar for phones.
@@ -166,6 +167,20 @@ export interface PythonRun {
   readonly clear: () => void
   readonly provideInput: (value: string) => void
   readonly session: RefObject<RunSession | null>
+}
+
+/** Checks the code in a worker of its own while the student types (`CodeEditor` `check`). */
+export function useSyntaxCheck(worker: WorkerFactory): SyntaxCheck {
+  const checker = useRef<SyntaxChecker | null>(null)
+  useEffect(() => () => {
+    checker.current?.dispose()
+    checker.current = null
+  }, [])
+  const [check] = useState<SyntaxCheck>(() => (code: string) => {
+    checker.current ??= createSyntaxChecker(worker)
+    return checker.current.check(code)
+  })
+  return check
 }
 
 export function usePythonRun(worker: WorkerFactory): PythonRun {

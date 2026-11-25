@@ -1,15 +1,17 @@
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands"
 import { python } from "@codemirror/lang-python"
 import { HighlightStyle, indentUnit, syntaxHighlighting } from "@codemirror/language"
+import { type Diagnostic, linter, lintGutter } from "@codemirror/lint"
 import { EditorState, type Extension, StateEffect, StateField } from "@codemirror/state"
-import { Decoration, type DecorationSet, EditorView, highlightActiveLine, keymap, lineNumbers } from "@codemirror/view"
+import { Decoration, type DecorationSet, EditorView, highlightActiveLine, keymap, lineNumbers, tooltips } from "@codemirror/view"
 import { tags } from "@lezer/highlight"
 import { Option } from "effect"
 import { useEffect, useRef } from "react"
 import { plainPunctuation } from "../core/punctuation.ts"
+import type { SyntaxProblem } from "../core/syntax-check.ts"
 
 // Python code editor (CodeMirror 6): syntax colors from the `--epy-code-*` variables of `python.css`, line numbers,
-// indent of 4 spaces, and the error line in red.
+// indent of 4 spaces, the error line of a run in red, and syntax errors marked while the student types.
 
 const highlight = HighlightStyle.define([
   { tag: [tags.keyword, tags.bool, tags.null, tags.self], color: "var(--epy-code-keyword)" },
@@ -28,8 +30,55 @@ const theme = EditorView.theme({
   ".cm-gutters": { backgroundColor: "var(--epy-muted)", color: "var(--epy-muted-text)", border: "none" },
   ".cm-activeLine": { backgroundColor: "color-mix(in oklab, var(--epy-primary) 6%, transparent)" },
   ".cm-error-line": { backgroundColor: "color-mix(in oklab, var(--epy-danger) 18%, transparent)" },
-  ".cm-cursor": { borderLeftColor: "var(--epy-text)", borderLeftWidth: "2px" }
+  ".cm-cursor": { borderLeftColor: "var(--epy-text)", borderLeftWidth: "2px" },
+  // Tooltips are on `document.body` (out of the `.epy` box), so the colors have fallbacks.
+  ".cm-tooltip-lint": { fontFamily: "system-ui, sans-serif", fontSize: "14px", maxWidth: "min(28rem, calc(100vw - 16px))", boxSizing: "border-box" },
+  ".cm-diagnostic": { lineHeight: "1.45", whiteSpace: "normal" },
+  ".cm-diagnostic code": { fontFamily: "ui-monospace, Menlo, Consolas, monospace", fontSize: "13px", padding: "0 3px", borderRadius: "4px", backgroundColor: "#f4f2f5" },
+  ".cm-lint-marker": { width: "0.9em", height: "0.9em" }
 })
+
+/** Pause after the last key before the code is checked. */
+const CheckDelayMs = 600
+
+/** The explanation with `code` in backticks as code. Built from text nodes: the message never becomes HTML. */
+const renderExplanation = (text: string): Node => {
+  const box = document.createElement("span")
+  text.split("`").forEach((part, index) => {
+    if (index % 2 === 0) {
+      box.append(document.createTextNode(part))
+      return
+    }
+    const code = document.createElement("code")
+    code.textContent = part
+    box.append(code)
+  })
+  return box
+}
+
+export type SyntaxCheck = (code: string) => Promise<Option.Option<SyntaxProblem>>
+
+/** Marks the line of a syntax error while the student types; `check` comes from the page (`useSyntaxCheck`). */
+const syntaxMarks = (current: () => SyntaxCheck | undefined): Extension => [
+  linter(async (view): Promise<ReadonlyArray<Diagnostic>> => {
+    const check = current()
+    const code = view.state.doc.toString()
+    if (check === undefined || code.trim() === "") return []
+    const found = await check(code)
+    // The student typed more while the code was checked: the next check marks it.
+    if (view.state.doc.toString() !== code) return []
+    return Option.match(found, {
+      onNone: () => [],
+      onSome: (problem): ReadonlyArray<Diagnostic> => {
+        const line = view.state.doc.line(Math.max(1, Math.min(problem.line, view.state.doc.lines)))
+        return [{ from: line.from, to: line.to, severity: "error", source: "Python", message: problem.explanation, renderMessage: () => renderExplanation(problem.explanation) }]
+      }
+    })
+  }, { delay: CheckDelayMs }),
+  lintGutter(),
+  // On the page body: the box of the IDE does not cut the explanation on a phone.
+  tooltips({ parent: document.body })
+]
 
 const setErrorLine = StateEffect.define<number | null>()
 
@@ -83,13 +132,15 @@ export function CodeEditor(props: Readonly<{
   onChange: (code: string) => void
   onRun: () => void
   onReady: (handle: EditorHandle) => void
+  /** Checks the code while the student types; without it the editor marks only the error line of a run. */
+  check?: SyntaxCheck
 }>) {
   const host = useRef<HTMLDivElement>(null)
   const view = useRef<EditorView | null>(null)
   // Callbacks change on each render; the editor is created once and reads the current ones.
-  const callbacks = useRef({ onChange: props.onChange, onRun: props.onRun })
+  const callbacks = useRef({ onChange: props.onChange, onRun: props.onRun, check: props.check })
   useEffect(() => {
-    callbacks.current = { onChange: props.onChange, onRun: props.onRun }
+    callbacks.current = { onChange: props.onChange, onRun: props.onRun, check: props.check }
   })
   // The editor is created once: a new `initialCode` does not replace the code that the student typed.
   const setup = useRef({ code: props.initialCode, label: props.label, height: props.height, onReady: props.onReady })
@@ -112,6 +163,7 @@ export function CodeEditor(props: Readonly<{
           theme,
           setup.current.height === EditorHeights.Fill ? fillTheme : [],
           errorLineField,
+          syntaxMarks(() => callbacks.current.check),
           plainInput,
           keymap.of([
             { key: "Mod-Enter", run: () => { callbacks.current.onRun(); return true }, preventDefault: true },

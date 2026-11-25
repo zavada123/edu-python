@@ -214,6 +214,9 @@ export const createRunSession = (createWorker: WorkerFactory, onChange: (view: R
         return halt(StopReasons.OutputLimit)
       case "LoadFailed":
         return halt(StopReasons.LoadFailed)
+      case "Checked":
+        // Checks go to their own worker (`syntax-check.ts`).
+        return
     }
   }
 

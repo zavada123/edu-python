@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import type { WorkerFactory } from "../core/session.ts"
 import { CodeEditor, EditorHeights, type EditorHandle } from "./code-editor.tsx"
 import { Button, ButtonSizes, ButtonVariants, cn } from "./kit.tsx"
-import { canStop, Console, ConsoleLayouts, errorLineOf, Problem, statusLine, SymbolBar, usePythonRun } from "./run-output.tsx"
+import { canStop, Console, ConsoleLayouts, errorLineOf, Problem, statusLine, SymbolBar, usePythonRun, useSyntaxCheck } from "./run-output.tsx"
 import { TkWindows } from "./tk-window.tsx"
 import { TurtleCanvas } from "./turtle-canvas.tsx"
 
@@ -32,6 +32,7 @@ export function PythonRunner(props: PythonRunnerProps) {
   const [code, setCode] = useState(props.initialCode)
   const [full, setFull] = useState(false)
   const run = usePythonRun(props.worker)
+  const check = useSyntaxCheck(props.worker)
   const onCodeChange = useRef(props.onCodeChange)
 
   useEffect(() => {
@@ -72,6 +73,7 @@ export function PythonRunner(props: PythonRunnerProps) {
         </Button>
       </div>
       <CodeEditor
+        check={check}
         initialCode={props.initialCode}
         label="Код програми на Python"
         height={EditorHeights.Grow}
