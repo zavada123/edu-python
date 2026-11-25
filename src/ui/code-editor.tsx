@@ -1,6 +1,7 @@
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands"
 import { python } from "@codemirror/lang-python"
 import { HighlightStyle, indentUnit, syntaxHighlighting } from "@codemirror/language"
+import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap } from "@codemirror/autocomplete"
 import { type Diagnostic, linter, lintGutter } from "@codemirror/lint"
 import { EditorState, type Extension, StateEffect, StateField } from "@codemirror/state"
 import { Decoration, type DecorationSet, EditorView, highlightActiveLine, keymap, lineNumbers, tooltips } from "@codemirror/view"
@@ -9,9 +10,12 @@ import { Option } from "effect"
 import { useEffect, useRef } from "react"
 import { plainPunctuation } from "../core/punctuation.ts"
 import type { SyntaxProblem } from "../core/syntax-check.ts"
+import { checkCode } from "../core/code-check.ts"
+import { pythonHints } from "./completions.ts"
 
 // Python code editor (CodeMirror 6): syntax colors from the `--epy-code-*` variables of `python.css`, line numbers,
-// indent of 4 spaces, the error line of a run in red, and syntax errors marked while the student types.
+// indent of 4 spaces, the error line of a run in red, mistakes marked while the student types (a syntax error from
+// the engine, then the checks of `code-check.ts`) and hints of names as in a desktop IDE (`completions.ts`).
 
 const highlight = HighlightStyle.define([
   { tag: [tags.keyword, tags.bool, tags.null, tags.self], color: "var(--epy-code-keyword)" },
@@ -35,7 +39,11 @@ const theme = EditorView.theme({
   ".cm-tooltip-lint": { fontFamily: "system-ui, sans-serif", fontSize: "14px", maxWidth: "min(28rem, calc(100vw - 16px))", boxSizing: "border-box" },
   ".cm-diagnostic": { lineHeight: "1.45", whiteSpace: "normal" },
   ".cm-diagnostic code": { fontFamily: "ui-monospace, Menlo, Consolas, monospace", fontSize: "13px", padding: "0 3px", borderRadius: "4px", backgroundColor: "#f4f2f5" },
-  ".cm-lint-marker": { width: "0.9em", height: "0.9em" }
+  ".cm-lint-marker": { width: "0.9em", height: "0.9em" },
+  ".cm-tooltip-autocomplete": { fontFamily: "ui-monospace, Menlo, Consolas, monospace", fontSize: "14px" },
+  ".cm-tooltip-autocomplete > ul > li": { padding: "2px 8px" },
+  ".cm-completionDetail": { opacity: "0.65", fontStyle: "normal", marginLeft: "0.5em" },
+  ".cm-completionInfo": { fontFamily: "system-ui, sans-serif", fontSize: "14px", maxWidth: "min(20rem, calc(100vw - 16px))", lineHeight: "1.45", padding: "6px 10px" }
 })
 
 /** Pause after the last key before the code is checked. */
@@ -63,12 +71,16 @@ const syntaxMarks = (current: () => SyntaxCheck | undefined): Extension => [
   linter(async (view): Promise<ReadonlyArray<Diagnostic>> => {
     const check = current()
     const code = view.state.doc.toString()
-    if (check === undefined || code.trim() === "") return []
-    const found = await check(code)
+    if (code.trim() === "") return []
+    const found = check === undefined ? Option.none() : await check(code)
     // The student typed more while the code was checked: the next check marks it.
     if (view.state.doc.toString() !== code) return []
     return Option.match(found, {
-      onNone: () => [],
+      // The word at the cursor is still being typed: `inp` is not marked before it becomes `input`.
+      onNone: () => checkCode(code).filter((warning) => warning.to !== view.state.selection.main.head).map((warning): Diagnostic => ({
+        from: warning.from, to: warning.to, severity: warning.severity, source: "Python", message: warning.message,
+        renderMessage: () => renderExplanation(warning.message)
+      })),
       onSome: (problem): ReadonlyArray<Diagnostic> => {
         const line = view.state.doc.line(Math.max(1, Math.min(problem.line, view.state.doc.lines)))
         return [{ from: line.from, to: line.to, severity: "error", source: "Python", message: problem.explanation, renderMessage: () => renderExplanation(problem.explanation) }]
@@ -164,9 +176,13 @@ export function CodeEditor(props: Readonly<{
           setup.current.height === EditorHeights.Fill ? fillTheme : [],
           errorLineField,
           syntaxMarks(() => callbacks.current.check),
+          autocompletion({ override: [pythonHints], icons: true, activateOnTypingDelay: 80 }),
+          closeBrackets(),
           plainInput,
           keymap.of([
             { key: "Mod-Enter", run: () => { callbacks.current.onRun(); return true }, preventDefault: true },
+            ...closeBracketsKeymap,
+            ...completionKeymap,
             ...defaultKeymap,
             ...historyKeymap,
             indentWithTab
