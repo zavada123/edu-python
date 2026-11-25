@@ -56,6 +56,8 @@ export interface Engine {
   readonly run: (request: RunRequest, sink: EngineSink) => RunResult
   /** One user action in a window of the program that is `Waiting`. */
   readonly event: (request: EventRequest, sink: EngineSink) => RunResult
+  /** Compiles the code without running it: the traceback of a SyntaxError, or "". */
+  readonly check: (code: string) => string
 }
 
 const NewLine = 10
@@ -296,5 +298,11 @@ export const loadEngine = async (sources: EngineSources): Promise<Engine> => {
     return finish("_mriya_result = _mriya_event(_mriya.source())")
   }
 
-  return { run, event }
+  const check = (code: string): string => {
+    source = code
+    python.runPython("_mriya_result = _mriya_check(_mriya.source())")
+    return text(python.globals.get("_mriya_result"))
+  }
+
+  return { run, event, check }
 }

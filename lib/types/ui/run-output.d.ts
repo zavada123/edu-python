@@ -1,7 +1,7 @@
 import { Option } from "effect";
 import { type ReactNode, type RefObject } from "react";
 import { type RunSession, type RunStatus, type RunView, type StopReason, type WorkerFactory } from "../core/session.ts";
-import type { EditorHandle } from "./code-editor.tsx";
+import type { EditorHandle, SyntaxCheck } from "./code-editor.tsx";
 export declare const stopText: Record<StopReason, string>;
 export declare const statusLine: (status: RunStatus) => string;
 export declare const isBusy: (status: RunStatus) => boolean;
@@ -34,6 +34,8 @@ export interface PythonRun {
     readonly provideInput: (value: string) => void;
     readonly session: RefObject<RunSession | null>;
 }
+/** Checks the code in a worker of its own while the student types (`CodeEditor` `check`). */
+export declare function useSyntaxCheck(worker: WorkerFactory): SyntaxCheck;
 export declare function usePythonRun(worker: WorkerFactory): PythonRun;
 /** "Stop" works while the program runs, waits for a value or shows a window. */
 export declare const canStop: (status: RunStatus) => boolean;

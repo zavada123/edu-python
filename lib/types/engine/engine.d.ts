@@ -39,6 +39,8 @@ export interface Engine {
     readonly run: (request: RunRequest, sink: EngineSink) => RunResult;
     /** One user action in a window of the program that is `Waiting`. */
     readonly event: (request: EventRequest, sink: EngineSink) => RunResult;
+    /** Compiles the code without running it: the traceback of a SyntaxError, or "". */
+    readonly check: (code: string) => string;
 }
 /** A sink that drops everything: start of a sink in tests and checks. */
 export declare const silentSink: EngineSink;

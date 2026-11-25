@@ -86,6 +86,31 @@ const namesInCode = (code: string): ReadonlyArray<string> =>
 const withoutStrings = (line: string): string =>
   line.replace(/"[^"\n]*"|'[^'\n]*'/g, (s) => `${s[0] ?? ""}${s[0] ?? ""}`).replace(/#.*$/gm, "")
 
+/** Words that may stand between two values: `x if a else b`, `a and b`, `for x in y`. */
+const JoinWords = new Set(["and", "or", "not", "in", "is", "if", "else", "for", "lambda", "as"])
+
+/** Two values in brackets one after another without a comma: `bind('<1>' click)` gives both. */
+const missingComma = (line: string): Option.Option<readonly [string, string]> => {
+  const tokens = line.replace(/#.*$/, "").match(/(?:[rRbBfFuU]{1,2})?(?:"[^"\n]*"|'[^'\n]*')|[A-Za-z_\u0400-\u04FF]\w*|\d+(?:\.\d+)?|\S/g) ?? []
+  let depth = 0
+  let last: string | null = null
+  for (const token of tokens) {
+    if ("([{".includes(token)) {
+      depth += 1
+      last = null
+    } else if (")]}".includes(token)) {
+      depth -= 1
+      last = token
+    } else if (/^["'\w\u0400-\u04FF]/.test(token) && !JoinWords.has(token)) {
+      if (depth > 0 && last !== null && !")]}".includes(last)) return Option.some([last, token] as const)
+      last = token
+    } else {
+      last = null
+    }
+  }
+  return Option.none()
+}
+
 const indentOf = (line: string): number => line.length - line.trimStart().length
 
 const typographic = (line: string): Option.Option<string> => {
@@ -147,6 +172,8 @@ const syntaxCause = (lines: ReadonlyArray<string>, reported: number): Option.Opt
       if (balance < 0) return Option.some("У рядку зайва дужка `)`. Порахуй, скільки дужок відкрито й скільки закрито.")
       return Option.none()
     },
+    (n) => Option.map(missingComma(at(n)), ([before, after]) =>
+      `Між \`${codeSafe(before)}\` і \`${codeSafe(after)}\` бракує коми. Значення в дужках розділяють комами: \`f(a, b)\`.`),
     (n) => {
       if (!/^\s*print\s+[^\s(=]/.test(at(n))) return Option.none()
       return Option.some("Після `print` треба дужки: `print(\"Привіт\")`.")

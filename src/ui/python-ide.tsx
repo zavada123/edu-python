@@ -4,7 +4,7 @@ import { type ChangeEvent, type ReactNode, useEffect, useRef, useState } from "r
 import type { WorkerFactory } from "../core/session.ts"
 import { Button, ButtonSizes, ButtonVariants, cn } from "./kit.tsx"
 import { CodeEditor, EditorHeights, type EditorHandle } from "./code-editor.tsx"
-import { canStop, Console, ConsoleLayouts, errorLineOf, Problem, statusLine, SymbolBar, usePythonRun } from "./run-output.tsx"
+import { canStop, Console, ConsoleLayouts, errorLineOf, Problem, statusLine, SymbolBar, usePythonRun, useSyntaxCheck } from "./run-output.tsx"
 import { TkWindows } from "./tk-window.tsx"
 import { TurtleCanvas } from "./turtle-canvas.tsx"
 
@@ -50,6 +50,7 @@ export function PythonIde(props: PythonIdeProps) {
   const [full, setFull] = useState(false)
   const [notice, setNotice] = useState("")
   const run = usePythonRun(props.worker)
+  const check = useSyntaxCheck(props.worker)
   const onCodeChange = useRef(props.onCodeChange)
 
   useEffect(() => {
@@ -126,6 +127,7 @@ export function PythonIde(props: PythonIdeProps) {
           </div>
           <div className="epy-ide__editor">
             <CodeEditor
+              check={check}
               initialCode={props.initialCode}
               label={`Код програми ${pythonFileName(props.fileName)}`}
               height={EditorHeights.Fill}
