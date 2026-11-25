@@ -4,6 +4,7 @@
  */
 export * from "./engine/protocol.ts"
 export { explainError, type ProgramError } from "./core/errors.ts"
+export { CheckSeverities, type CheckSeverity, checkCode, type CodeWarning } from "./core/code-check.ts"
 export { plainPunctuation } from "./core/punctuation.ts"
 export {
   browserWorker,
