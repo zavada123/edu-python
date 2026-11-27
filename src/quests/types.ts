@@ -112,6 +112,11 @@ export interface LessonStep {
   readonly notes: readonly LessonNote[]
   /** A program that the editor starts with, so that the student can run it at once. */
   readonly example: string
+  /**
+   * Words of the lesson that the school topics before the chapter do not teach (see `curriculum.ts`). Only a
+   * bonus mission can teach such words; a lesson of a base mission only repeats what the class knows.
+   */
+  readonly teaches: readonly string[]
 }
 
 export type TaskStep = ProgramStep | AnswerStep
@@ -119,14 +124,24 @@ export type Step = TaskStep | LessonStep
 
 export interface Chapter {
   readonly id: string
+  /**
+   * The school topic after which the chapter can be given, e.g. "5-27" (grade 5, paragraph 27). Programs of the
+   * chapter use only what the class knows after this topic, and what the lessons of a bonus mission teach.
+   */
+  readonly after: string
   readonly title: string
   /** Python topics of the chapter, for the teacher, e.g. "if, elif, else". */
   readonly topics: string
   readonly steps: readonly Step[]
 }
 
+/** A base mission uses only what the class knows. A bonus mission is for stronger students and teaches more. */
+export const Levels = { Base: "base", Bonus: "bonus" } as const
+export type Level = (typeof Levels)[keyof typeof Levels]
+
 export interface Mission {
   readonly id: string
+  readonly level: Level
   readonly title: string
   /** One paragraph for the mission card. */
   readonly summary: string

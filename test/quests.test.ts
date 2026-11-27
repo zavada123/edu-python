@@ -12,9 +12,14 @@ import {
   missions,
   normalizeAnswer,
   type ProgramStep,
+  Levels,
+  type Mission,
   showsValue,
   type Step,
-  taskSteps
+  taskSteps,
+  topicById,
+  topics,
+  unknownWords
 } from "../src/quests.ts"
 
 // Every mission is checked against itself: the reference programs pass every trial, the starter code does not
@@ -127,7 +132,7 @@ describe("checks", () => {
 
   test("finds the words that the program must use, but not in strings", () => {
     // Act & Assert
-    expect(temperature === undefined ? [] : missingWords(temperature, 'print("if else")')).toEqual(["if", "else"])
+    expect(temperature === undefined ? [] : missingWords(temperature, 'print("if else")')).toEqual(["if"])
   })
 
   test("explains a known mistake: numbers glued as text", async () => {
@@ -209,5 +214,76 @@ describe("checks", () => {
   test("answers ignore case, ґ and the last full stop", () => {
     // Act & Assert
     expect(normalizeAnswer("  Ґанок.  ")).toBe("ганок")
+  })
+})
+
+/** The code of a step that students read or run: the reference program, the starter, the example of a lesson. */
+const codesOf = (step: Step): readonly string[] => {
+  switch (step.kind) {
+    case "program":
+      return [step.solution, step.starter]
+    case "answer":
+      return [step.starter]
+    case "lesson":
+      return [step.example]
+  }
+}
+
+/** Each code of the mission with the words that students do not know at its place. */
+const untaught = (mission: Mission): readonly string[] => {
+  const taught: string[] = []
+  return mission.chapters.flatMap((chapter) =>
+    chapter.steps.flatMap((step) => {
+      if (step.kind === "lesson") taught.push(...step.teaches)
+      return codesOf(step).flatMap((code) => {
+        const words = unknownWords(code, chapter.after, taught)
+        return words.length === 0 ? [] : [`${step.id}: ${words.join(", ")}`]
+      })
+    })
+  )
+}
+
+describe("curriculum", () => {
+  test("topics go in the order of the course and have unique ids", () => {
+    // Act
+    const order = topics.map((t) => t.grade * 100 + t.paragraph)
+
+    // Assert
+    expect(order).toEqual([...order].sort((a, b) => a - b))
+    expect(new Set(topics.map((t) => t.id)).size).toBe(topics.length)
+  })
+
+  test.each(missions.map((m) => [m.id, m] as const))("chapters of %s name known topics in the order of the course", (_, m) => {
+    // Act
+    const places = m.chapters.map((c) => topics.findIndex((t) => t.id === c.after))
+
+    // Assert
+    expect(m.chapters.filter((c) => topicById(c.after) === undefined).map((c) => c.id)).toEqual([])
+    expect(places).toEqual([...places].sort((a, b) => a - b))
+  })
+
+  test.each(missions.map((m) => [m.id, m] as const))("%s uses only what students know at each step", (_, m) => {
+    // Act & Assert
+    expect(untaught(m)).toEqual([])
+  })
+
+  test.each(missions.filter((m) => m.level === Levels.Base).map((m) => [m.id, m] as const))(
+    "lessons of the base mission %s teach nothing beyond the school topics",
+    (_, m) => {
+      // Act
+      const teaching = allSteps(m).flatMap((s) => (s.kind === "lesson" && s.teaches.length > 0 ? [s.id] : []))
+
+      // Assert
+      expect(teaching).toEqual([])
+    }
+  )
+
+  test("finds a word from a later topic and a word that the course does not teach", () => {
+    // Act & Assert
+    expect(unknownWords("n = 3\nwhile n > 0:\n    n = n - 1", "5-29", [])).toEqual(["while"])
+    expect(unknownWords("x = eval(input())", "9-13", [])).toEqual(["eval"])
+    expect(unknownWords("s = input()\nprint(s[1:3], len(s))", "7-10", [])).toEqual(["<slice>"])
+    expect(unknownWords("label.title = 1\ntitle = 2", "5-29", [])).toEqual([".title"])
+    expect(unknownWords("while True:\n    break", "5-29", ["while"])).toEqual(["break"])
   })
 })

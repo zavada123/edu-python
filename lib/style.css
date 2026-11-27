@@ -317,6 +317,8 @@
 .epq-chapter-num { display: inline-grid; place-items: center; flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--epy-muted); font-size: 12px; }
 .epq-chapter.is-done .epq-chapter-num { background: var(--epq-ok); color: #ffffff; }
 .epq-chapter-topics { font-size: 12px; color: var(--epy-muted-text); }
+.epq-chapter-after { font-size: 11px; color: var(--epy-muted-text); }
+.epq-bonus { margin-right: 8px; border-radius: 999px; background: var(--epy-warning-soft); padding: 2px 8px; color: var(--epy-text); letter-spacing: 0; text-transform: none; }
 .epq-dots { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
 .epq-dot { width: 18px; height: 18px; border: 2px solid var(--epy-border); border-radius: 50%; background: var(--epy-card); padding: 0; cursor: pointer; }
 .epq-dot.is-lesson { border-radius: 4px; }

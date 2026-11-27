@@ -4,6 +4,8 @@ import type { WorkerFactory } from "../core/session.ts"
 import { answerIsRight, checkProgram, type ProgramVerdict, verdictMessage } from "../quests/check.ts"
 import { allSteps, currentStep, emptyProgress, isStepDone, makeReport, markSolved, taskSteps } from "../quests/progress.ts"
 import { workerDriver } from "../quests/run.ts"
+import { topicLabel } from "../quests/curriculum.ts"
+import { Levels } from "../quests/types.ts"
 import type { LessonStep, Mission, Progress, Report, Step, StoryLine } from "../quests/types.ts"
 import { CodeText } from "./code-text.tsx"
 import { Button, ButtonSizes, ButtonVariants, cn } from "./kit.tsx"
@@ -90,7 +92,10 @@ function QuestMap(props: Readonly<{ mission: Mission; progress: Progress; viewin
     <header className="epq-head">
       <div className="epq-head-top">
         <div className="epq-head-text">
-          <p className="epq-kicker">Місія · {props.mission.grades} клас</p>
+          <p className="epq-kicker">
+            {props.mission.level === Levels.Bonus ? <span className="epq-bonus">⭐ Для сильніших</span> : null}
+            Місія · {props.mission.grades} клас
+          </p>
           <h2 className="epq-title">{props.mission.title}</h2>
         </div>
         <div className="epq-meter" aria-label={`Виконано ${done} з ${tasks.length}`}>
@@ -109,6 +114,7 @@ function QuestMap(props: Readonly<{ mission: Mission; progress: Progress; viewin
                 {ch.title}
               </span>
               <span className="epq-chapter-topics">{ch.topics}</span>
+              <span className="epq-chapter-after">Після теми: {topicLabel(ch.after)}</span>
               <span className="epq-dots">
                 {ch.steps.map((s) => {
                   const solved = isStepDone(props.progress, s.id)

@@ -4,6 +4,7 @@
  * `edu-python/engine`). The UI is `PythonQuest` of `edu-python/react`.
  */
 export * from "./quests/types.ts"
+export * from "./quests/curriculum.ts"
 export * from "./quests/check.ts"
 export * from "./quests/progress.ts"
 export * from "./quests/run.ts"
