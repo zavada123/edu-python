@@ -1,7 +1,7 @@
 import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 
-// The package build: four ES entries and one CSS file in lib/. The demo build (vite.config.ts) goes to dist/.
+// The package build: five ES entries and one CSS file in lib/. The demo build (vite.config.ts) goes to dist/.
 // The Python texts (`?raw`) are built into lib/; React, Effect, CodeMirror and MicroPython stay outside: the page
 // installs them once and bundles them itself.
 export default defineConfig({
@@ -12,7 +12,7 @@ export default defineConfig({
     // The page that uses the package minifies it with its own build.
     minify: false,
     lib: {
-      entry: { engine: "src/engine.ts", core: "src/core.ts", worker: "src/worker.ts", react: "src/react.ts" },
+      entry: { engine: "src/engine.ts", core: "src/core.ts", worker: "src/worker.ts", react: "src/react.ts", quests: "src/quests.ts" },
       formats: ["es"],
       cssFileName: "style"
     },

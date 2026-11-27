@@ -41,6 +41,10 @@
       "types": "./lib/types/react.d.ts",
       "import": "./lib/react.js"
     },
+    "./quests": {
+      "types": "./lib/types/quests.d.ts",
+      "import": "./lib/quests.js"
+    },
     "./style.css": "./lib/style.css"
   },
   "dependencies": {

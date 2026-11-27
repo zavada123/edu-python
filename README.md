@@ -53,6 +53,7 @@ School programs need more than `print()`: they ask for values with `input()`, dr
 - **Phones**: a symbol bar (`Tab ( ) : " ' = , + - * / < > [ ] # _`) on touch screens; smart quotes from a phone keyboard become plain quotes.
 - **Share link**: the code goes in the fragment of the address (`#code=…`, base64url of UTF-8, up to 6 000 characters), which never reaches the server.
 - **Server checks**: `runProgram` runs a program with the whole input known in advance and returns its output, a traceback, "needs more input" or "output limit".
+- **Tasks with automatic checks** (`PythonQuest`, `edu-python/quests`): missions of lessons and tasks with a story, in the style of the SQL trainer [edu-sql](https://github.com/zavada123/edu-sql). A program step runs the student's program on trials and shows ✓ or ✗ for each, with an explanation in Ukrainian ("Програма склеїла 7 і 3 як текст…") and the output next to the wanted output. Window trials type into the fields of a tkinter window, click its buttons and read what it shows. A step can ask for words such as `for` or `while` (found on the syntax tree). Mission 1, «Космічна станція «Мрія»» (grades 5–8): `print`, `input`, `int`, `if`, `for`, `while`, strings, 15 tasks and 6 lessons. Mission 2, «Свій калькулятор» (grades 7–9): a calculator in tkinter from nothing, 6 tasks and 4 lessons.
 - **Ukrainian UI**, keyboard friendly, WCAG AA colors for the code, light and dark page themes through CSS variables.
 
 <p align="center">
@@ -160,6 +161,24 @@ const result = runProgram(engine, "a = int(input())\nprint(a * 2)", "21\n", () =
 
 `runProgram` does not stop a program that never ends, and MicroPython can reach JavaScript (`import js`). Never run student code in the server process: run it in a child process with a time limit, an empty environment and the [Node permission model](https://nodejs.org/api/permissions.html) (`--permission`, read access only to the engine files, `--disallow-code-generation-from-strings`), and replace the first entry of the `proxy_js_ref` table with an empty object so that `import js` gives nothing. One process per submission keeps one student from changing `builtins` for another. EduProstir does it this way in `packages/python/src/sandbox.ts`.
 
+### Tasks with automatic checks
+
+```tsx
+import { emptyProgress, spaceStation } from "edu-python/quests"
+import { PythonQuest } from "edu-python/react"
+
+<PythonQuest
+  mission={spaceStation}
+  worker={worker}
+  initialProgress={saved ?? emptyProgress(spaceStation)}
+  onChange={(progress) => saveDraft(progress)}
+  onStepSolved={(report) => report.finished && saveResult(report)}
+  endExtra={null}
+/>
+```
+
+The checks run in a new worker for each trial. In Node, give the checks the engine: `checkProgram(engineDriver(engine), step, code)` (`engineDriver` is in `edu-python/engine`). `checkMission` checks all saved answers of a mission again. The tests in `test/quests.test.ts` run every reference program on its trials, so a new mission is checked when it is added.
+
 ### Theme
 
 All colors are CSS variables on `.epy`. Set them on the page to use its own theme, also for a dark theme. A selector stronger than `.epy` wins even when `style.css` loads later:
@@ -186,8 +205,9 @@ html .epy {
 
 | Entry point | Contents |
 |---|---|
-| `edu-python/react` | `PythonIde`, `PythonRunner` and their parts: `CodeEditor`, `Console`, `Problem`, `SymbolBar`, `TkWindows`, `TurtleCanvas`, `usePythonRun` |
+| `edu-python/react` | `PythonIde`, `PythonRunner`, `PythonQuest` and their parts: `CodeEditor`, `Console`, `Problem`, `SymbolBar`, `TkWindows`, `TurtleCanvas`, `usePythonRun` |
 | `edu-python/core` | `browserWorker`, `createRunSession` (the run without React), `explainError`, `plainPunctuation`, `shareFragmentOf` / `sharedCodeOf`, `decodeScene`, the worker protocol, `inputLines`, `TestSeed`. No React and no engine |
+| `edu-python/quests` | Missions (`missions`, `spaceStation`, `calculator`), `checkProgram`, `checkMission`, `answerIsRight`, the progress (`emptyProgress`, `markSolved`, `currentStep`, `makeReport`) and `workerDriver`. No React |
 | `edu-python/worker` | `startPythonWorker(wasmUrl)` for the worker file of the page |
 | `edu-python/engine` | `loadEngine`, `loadNodeEngine`, `runProgram`, `silentSink`, the protocol and the Python texts of `turtle` and `tkinter` (`pythonLibrary`, `pythonPrelude`). For Node and for workers |
 | `edu-python/style.css` | Styles of the components |
