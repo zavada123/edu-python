@@ -7,3 +7,4 @@ export { type Library, type LibraryFile, LibraryFiles, readLibrary } from "./eng
 export { type ProgramResult, runProgram } from "./engine/program.ts"
 export * from "./engine/protocol.ts"
 export { engineSources, loadNodeEngine, pythonLibrary, pythonPrelude } from "./engine/sources.ts"
+export { engineDriver } from "./engine/quest-driver.ts"

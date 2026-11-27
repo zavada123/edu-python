@@ -3,7 +3,8 @@ import { Link2 } from "lucide-react"
 import { StrictMode, useRef, useState } from "react"
 import { createRoot } from "react-dom/client"
 import { browserWorker, shareFragmentOf, sharedCodeOf } from "../core.ts"
-import { PythonIde, PythonRunner } from "../react.ts"
+import { emptyProgress, missions } from "../quests.ts"
+import { PythonIde, PythonQuest, PythonRunner } from "../react.ts"
 import "../ui/python.css"
 import "./demo.css"
 
@@ -81,6 +82,10 @@ function Demo() {
       />
       <h2>Компактний запуск для уроку чи завдання</h2>
       <PythonRunner worker={worker} initialCode={turtleSample} resetCode={turtleSample} onCodeChange={() => undefined} onEditorReady={() => undefined} note="" />
+      <h2>Завдання з автоматичною перевіркою</h2>
+      {missions.map((m) => (
+        <PythonQuest key={m.id} mission={m} worker={worker} initialProgress={emptyProgress(m)} onChange={() => undefined} onStepSolved={() => undefined} endExtra={null} />
+      ))}
     </main>
   )
 }

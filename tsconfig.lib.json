@@ -8,6 +8,6 @@
     "rootDir": "src",
     "outDir": "lib/types"
   },
-  "include": ["src/engine.ts", "src/core.ts", "src/worker.ts", "src/react.ts", "src/engine/micropython.d.ts", "src/vite-env.d.ts"],
+  "include": ["src/engine.ts", "src/core.ts", "src/worker.ts", "src/react.ts", "src/quests.ts", "src/engine/micropython.d.ts", "src/vite-env.d.ts"],
   "exclude": ["src/**/*.test.ts", "src/demo"]
 }

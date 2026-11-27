@@ -294,4 +294,104 @@
 .epy-tk-screen__windows--screen { margin: 0; }
 .epy-tk-screen .epy-tk-desktop { padding: 0; }
 .epy-tk-stage--screen { position: relative; box-sizing: border-box; outline: 1px dashed rgb(255 255 255 / 0.35); background: rgb(255 255 255 / 0.04); }
+/* Missions of Python tasks (`python-quest.tsx`). Colors come from the `--epy-*` variables of python.css. */
+
+.epq { display: flex; flex-direction: column; gap: 16px; --epq-ok: #067647; --epq-ok-soft: color-mix(in oklab, #12b76a 14%, var(--epy-card)); }
+.epq p { margin: 0; }
+.epq-kicker { font-size: 13px; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; color: var(--epy-muted-text); }
+.epq-muted { color: var(--epy-muted-text); font-size: 14px; }
+
+/* Map of the mission */
+.epq-head { display: flex; flex-direction: column; gap: 12px; border: 1px solid var(--epy-border); border-radius: var(--epy-radius); background: var(--epy-card); padding: 16px; }
+.epq-head-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.epq-title { margin: 0; font-size: 22px; line-height: 1.2; }
+.epq-meter { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; min-width: 120px; font-size: 14px; color: var(--epy-muted-text); }
+.epq-meter strong { font-size: 20px; color: var(--epy-text); }
+.epq-meter-bar { display: block; width: 120px; height: 8px; overflow: hidden; border-radius: 999px; background: var(--epy-muted); }
+.epq-meter-bar > span { display: block; height: 100%; background: var(--epy-primary); transition: width 0.4s ease; }
+.epq-map { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.epq-chapter { display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--epy-border); border-radius: 8px; padding: 8px 10px; }
+.epq-chapter.is-active { border-color: var(--epy-primary); box-shadow: 0 0 0 1px var(--epy-primary) inset; }
+.epq-chapter.is-done { background: var(--epq-ok-soft); }
+.epq-chapter-title { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; }
+.epq-chapter-num { display: inline-grid; place-items: center; flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--epy-muted); font-size: 12px; }
+.epq-chapter.is-done .epq-chapter-num { background: var(--epq-ok); color: #ffffff; }
+.epq-chapter-topics { font-size: 12px; color: var(--epy-muted-text); }
+.epq-chapter-after { font-size: 11px; color: var(--epy-muted-text); }
+.epq-bonus { margin-right: 8px; border-radius: 999px; background: var(--epy-warning-soft); padding: 2px 8px; color: var(--epy-text); letter-spacing: 0; text-transform: none; }
+.epq-dots { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.epq-dot { width: 18px; height: 18px; border: 2px solid var(--epy-border); border-radius: 50%; background: var(--epy-card); padding: 0; cursor: pointer; }
+.epq-dot.is-lesson { border-radius: 4px; }
+.epq-dot.is-done { border-color: var(--epq-ok); background: var(--epq-ok); }
+.epq-dot.is-here { outline: 3px solid var(--epy-ring); outline-offset: 1px; border-color: var(--epy-primary); }
+.epq-dot:disabled { cursor: not-allowed; opacity: 0.45; }
+.epq-dot:focus-visible { outline: 3px solid var(--epy-ring); outline-offset: 2px; }
+
+/* Task and editor */
+.epq-grid { display: grid; gap: 16px; }
+@media (min-width: 1024px) { .epq-grid { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: start; } }
+.epq-task { display: flex; flex-direction: column; gap: 14px; }
+.epq-task > .epy-btn { align-self: flex-start; }
+.epq-step-label { font-size: 13px; color: var(--epy-muted-text); }
+.epq-step-title { margin: -8px 0 0; font-size: 20px; }
+.epq-work { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.epq-file { font-family: var(--epy-font-mono); font-size: 13px; color: var(--epy-muted-text); }
+
+.epq-story { display: flex; flex-direction: column; gap: 10px; }
+.epq-narrator { font-style: italic; color: var(--epy-muted-text); }
+.epq-say { display: flex; align-items: flex-start; gap: 10px; }
+.epq-robot { flex: none; }
+.epq-captain { display: inline-grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 50%; background: var(--epy-muted); font-size: 24px; }
+.epq-bubble { min-width: 0; border: 1px solid var(--epy-border); border-radius: 4px 14px 14px 14px; background: var(--epy-muted); padding: 8px 12px; }
+.epq-who { display: block; font-size: 12px; font-weight: 700; color: var(--epy-muted-text); }
+
+.epq-goal { display: flex; gap: 10px; border-left: 4px solid var(--epy-primary); border-radius: 8px; background: var(--epy-primary-soft); padding: 12px; }
+.epq-goal > span { font-size: 22px; line-height: 1; }
+.epq-goal p { margin-top: 4px; white-space: pre-line; }
+
+.epq-lesson { display: flex; flex-direction: column; gap: 10px; border: 1px solid var(--epy-border); border-radius: var(--epy-radius); background: var(--epy-card); padding: 14px; }
+.epq-syntax span { display: block; font-size: 12px; font-weight: 700; color: var(--epy-muted-text); }
+.epq-syntax pre, .epq-compare pre { margin: 4px 0 0; overflow-x: auto; border-radius: 6px; background: var(--epy-muted); padding: 8px 10px; font-family: var(--epy-font-mono); font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.epq-notes { width: 100%; border-collapse: collapse; font-size: 14px; }
+.epq-notes th, .epq-notes td { border-top: 1px solid var(--epy-border); padding: 6px 4px; text-align: left; vertical-align: top; }
+.epq-notes th { width: 45%; font-weight: 400; }
+.epq-notes code { font-family: var(--epy-font-mono); overflow-wrap: anywhere; }
+
+.epq-answer { display: flex; flex-wrap: wrap; gap: 8px; }
+.epq-answer input { flex: 1 1 180px; min-height: 44px; border: 1px solid var(--epy-border); border-radius: 8px; background: var(--epy-card); padding: 0 12px; color: var(--epy-text); font: inherit; }
+.epq-answer input:focus-visible { outline: 3px solid var(--epy-ring); outline-offset: 1px; }
+
+.epq-wrong { border-radius: 8px; background: var(--epy-warning-soft); padding: 10px 12px; }
+.epq-hints { display: flex; flex-direction: column; gap: 6px; }
+.epq-hint { display: flex; gap: 6px; align-items: flex-start; }
+.epq-hint svg { flex: none; width: 18px; height: 18px; margin-top: 2px; color: var(--epy-warning); }
+.epq-link { align-self: flex-start; border: 0; background: none; padding: 4px 0; color: var(--epy-primary); font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
+
+.epq-trials { border: 1px solid var(--epy-border); border-radius: var(--epy-radius); background: var(--epy-card); padding: 12px; }
+.epq-trials-title { font-weight: 700; }
+.epq-trials ul { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 0; padding: 0; list-style: none; }
+.epq-trials li { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 4px 8px; align-items: baseline; }
+.epq-trial-mark { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; color: #ffffff; font-weight: 700; }
+.is-ok > .epq-trial-mark { background: var(--epq-ok); }
+.is-bad > .epq-trial-mark { background: var(--epy-danger); }
+.epq-trial-why { grid-column: 2; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.epq-compare { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+.epq-compare span { font-size: 12px; color: var(--epy-muted-text); }
+
+.epq-clue { display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--epq-ok); border-radius: var(--epy-radius); background: var(--epq-ok-soft); padding: 12px; }
+.epq-clue .epy-btn { align-self: flex-start; }
+.epq-clue-head { display: flex; align-items: center; gap: 8px; }
+
+.epq-log summary { cursor: pointer; font-weight: 600; }
+.epq-log ol { margin: 8px 0 0; padding-left: 20px; font-size: 14px; }
+
+/* Final screen */
+.epq-end { display: flex; flex-direction: column; align-items: center; gap: 14px; border: 1px solid var(--epy-border); border-radius: var(--epy-radius); background: var(--epy-card); padding: 24px 16px; text-align: center; }
+.epq-end .epq-story { text-align: left; max-width: 560px; }
+.epq-stamp { border: 3px solid var(--epq-ok); border-radius: 8px; padding: 4px 14px; color: var(--epq-ok); font-size: 18px; font-weight: 800; text-transform: uppercase; transform: rotate(-4deg); }
+.epq-stats { display: flex; gap: 24px; margin: 0; }
+.epq-stats dt { font-size: 13px; color: var(--epy-muted-text); }
+.epq-stats dd { margin: 0; font-size: 22px; font-weight: 700; }
+
+@media (prefers-reduced-motion: reduce) { .epq-meter-bar > span { transition: none; } }
 /*$vite$:1*/
